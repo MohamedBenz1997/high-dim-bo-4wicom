@@ -10,6 +10,7 @@ import tensorflow as tf
 import torch
 from scipy.io import savemat
 from tqdm import tqdm
+import numpy as np
 
 from TerrestrialClass import Terrestrial
 from SinrClass import SINR
@@ -139,13 +140,21 @@ def optimize_qEI_and_get_observation(model, train_obj):
 
 # Run BO loop
 ########################################################
-BO_itertions = 1000
-data_size=912
+BO_itertions = 100
+data_size = 100
 
 #Initial tilts and powers and obj value
-thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 0.0, tf.float32), axis=0),axis=2)-12.0
+thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 0.0, tf.float32), axis=0),axis=2)
+# # Alpha0 Best (obj=4.78) Prior 912 Samples
+# thresholds_vector = tf.expand_dims(tf.constant([[
+#     -11.7359, -12.7983, -10.7167, -11.4129, -10.4888, -11.2637, -11.3429, -12.4476, -11.5424, -10.8629,
+#     -10.6428, -11.2177, -11.0399, -11.1755, -11.0855, -11.4278, -11.4093, -12.2184, -10.6219, -12.0062,
+#     -12.1743, -12.4214, -13.1057, -12.5554, -11.9632, -12.4047, -12.1101, -12.3828, -12.1266, -13.3123,
+#     -12.7162, -10.9860, -11.8068, -13.0786, -12.4863, -12.8726, -12.2590, -13.3431, -11.6485, -11.1929,
+#     -11.9571, -11.2089, -11.5908, -10.6035, -11.0119, -11.4163, -11.3212, -12.0278, -11.1372, -10.8733,
+#     -10.8399, -10.5011, -10.3708, -10.1331, -12.8212, -11.9515, -11.6880]]), axis=2)
 Ptx_thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 46.0, 46.0, tf.float32), axis=0),axis=2)
-obj_vector = torch.tensor([[-3.80]], dtype=torch.double)
+obj_vector = torch.tensor([[-2.13]], dtype=torch.double)
 
 # Creat the training data-set
 train_x, train_obj = generate_initial_data(thresholds_vector, Ptx_thresholds_vector, obj_vector,data_size)
@@ -214,5 +223,11 @@ for i in tqdm(range(BO_itertions)):
                "optimum_thresholds": optimum_thresholds.numpy(),
                "best_rate_so_far": best_rate_so_far.numpy(),
                "Full_tilts": Full_tilts.numpy()}
-    file_name = "2023_07_05_HighDim_BO_tilt_Alpha0_GUEs_Product_Rate_iteration{}_set1.mat".format(i)
+    file_name = "2023_07_07_HighDim_BO_tilt_Alpha0_GUEs_Product_Rate_iteration{}_set1.mat".format(i)
     savemat(file_name, data_BO)
+
+    d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
+          "SINR_GUEs": 10 * np.log10(sinr_total_GUEs.numpy()),
+          "Rate_UAVs": Rate_UAVs.numpy(),
+          "Rate_GUEs": Rate_GUEs.numpy()}
+    savemat("2023_06_20_SINRgi_Rate_Alpha0_ProductRateObj.mat", d)
