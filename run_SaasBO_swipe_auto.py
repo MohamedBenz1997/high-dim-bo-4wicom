@@ -226,8 +226,8 @@ for i in tqdm(range(BO_itertions)):
     file_name = "2023_07_07_HighDim_BO_tilt_Alpha0_GUEs_Product_Rate_iteration{}_set1.mat".format(i)
     savemat(file_name, data_BO)
 
-    d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
-          "SINR_GUEs": 10 * np.log10(sinr_total_GUEs.numpy()),
-          "Rate_UAVs": Rate_UAVs.numpy(),
-          "Rate_GUEs": Rate_GUEs.numpy()}
-    savemat("2023_06_20_SINRgi_Rate_Alpha0_ProductRateObj.mat", d)
+    # d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
+    #       "SINR_GUEs": 10 * np.log10(sinr_total_GUEs.numpy()),
+    #       "Rate_UAVs": Rate_UAVs.numpy(),
+    #       "Rate_GUEs": Rate_GUEs.numpy()}
+    # savemat("2023_06_20_SINRgi_Rate_Alpha0_ProductRateObj.mat", d)
