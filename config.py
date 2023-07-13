@@ -105,8 +105,8 @@ class Config():
         # ------------ UAVs deployment
         self.UAVs = True
         # self.Zuav=150.0        #UAV Height
-        self.GUE_ratio=0.993334 #Case5: 0.6667, Case4: 0.8, Case3: 0.93334, Case2:0.993334
-        self.UAV_ratio=0.006666 #Case5: 0.3333, Case4: 0.2, Case3: 0.06666, Case2:0.006666
+        self.GUE_ratio=0.6667 #Case5: 0.6667, Case4: 0.8, Case3: 0.93334, Case2:0.993334
+        self.UAV_ratio= 0.3333 #Case5: 0.3333, Case4: 0.2, Case3: 0.06666, Case2:0.006666
         self.Zuav = tf.random.uniform([2 * self.batch_num, int(self.UAV_ratio * self.Nuser_drop)+1, 1], 150.0, 150.0) #+1 for case5,3,2
 
         self.k_dominant_BS=57    #Used for SINR offloading. This is dominant BSs interfernce instead of looking at entire 57 BSs. This value should be desired k with +1
@@ -124,7 +124,7 @@ class Config():
         # --------- To support 1-tier only evaluations (21-cells [index: 4,5,8,9,10,13,14])
         self.one_tier = False
         self.LSG_all = False
-        self.UAVs_highway = False
+        self.UAVs_highway = True
 
         # --------- Assigment based on RSS+toe (where toe is going to be optimized by BO for load balancing)
         self.RSS_offloading = False

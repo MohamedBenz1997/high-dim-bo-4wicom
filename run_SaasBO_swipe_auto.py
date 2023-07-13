@@ -51,7 +51,7 @@ def generate_initial_data(thresholds_vector, Ptx_thresholds_vector, obj_vector, 
     for j in range(data_size):
 
         #Setting Random tilts for creating a data set
-        BS_tilt = tf.random.uniform(thresholds_vector.shape, -20, 0)
+        BS_tilt = tf.random.uniform(thresholds_vector.shape, -20, 30)
         new_train_x = torch.from_numpy(BS_tilt[:,:,0].numpy()).double()
         # BS_tilt = thresholds_vector  # This is for getting the SINR for the opt thresholds after finishing
         BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
@@ -74,8 +74,8 @@ def generate_initial_data(thresholds_vector, Ptx_thresholds_vector, obj_vector, 
         sinr_TN_GUEs = SINR.sinr_TN(LSG_GUEs, P_Tx_TN)
 
         # BO objective: Sum of log of the RSS
-        SINR_sumOftheLog_Obj, Rate_sumOftheLog_Obj, sinr_total_UAVs, sinr_total_GUEs = SINR.BO_Multi_Obj_Cooridor(sinr_TN_UAVs_Corridors, sinr_TN_GUEs, alpha=0.0)
-        Rate_sumOftheLog_Obj, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN,alpha=0.0)
+        SINR_sumOftheLog_Obj, Rate_sumOftheLog_Obj, sinr_total_UAVs, sinr_total_GUEs = SINR.BO_Multi_Obj_Cooridor(sinr_TN_UAVs_Corridors, sinr_TN_GUEs, alpha=0.5)
+        Rate_sumOftheLog_Obj, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN,alpha=0.5)
         Rate_obj = Rate_sumOftheLog_Obj[0].__float__()
         new_obj = torch.tensor([[Rate_obj]], dtype=torch.double)
 
@@ -88,8 +88,8 @@ def generate_initial_data(thresholds_vector, Ptx_thresholds_vector, obj_vector, 
         train_obj = torch.cat((train_obj, new_obj), dim=0)
 
     # Save the torch tensors to a file with .pt extension to be loaded using python later
-    file_name = "2023_07_05_Alpha0_GUEs_Product_Rate_DataSet.pt"
-    torch.save({"train_x": train_x, "train_obj": train_obj}, file_name)
+    # file_name = "2023_07_14_AlphaHalf_Mix_Product_Rate_DataSet.pt"
+    # torch.save({"train_x": train_x, "train_obj": train_obj}, file_name)
 
     return train_x, train_obj
 
@@ -121,7 +121,7 @@ def optimize_qEI_and_get_observation(model, train_obj):
 
     DIM = 57
     lower_bound = -20.0
-    upper_bound = 0.0
+    upper_bound = 30.0
     bounds = torch.cat((torch.zeros(1, DIM)+lower_bound, torch.zeros(1, DIM)+upper_bound))
 
     EI = qExpectedImprovement(model=model, best_f=train_obj.max())
@@ -140,12 +140,12 @@ def optimize_qEI_and_get_observation(model, train_obj):
 
 # Run BO loop
 ########################################################
-BO_itertions = 100
-data_size = 100
+BO_itertions = 250
+data_size = 10
 
 #Initial tilts and powers and obj value
 thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 0.0, tf.float32), axis=0),axis=2)
-# # Alpha0 Best (obj=4.78) Prior 912 Samples
+# # Alpha0 Best (obj=4.78) Prior 912 Samples, Conv=1 iteration
 # thresholds_vector = tf.expand_dims(tf.constant([[
 #     -11.7359, -12.7983, -10.7167, -11.4129, -10.4888, -11.2637, -11.3429, -12.4476, -11.5424, -10.8629,
 #     -10.6428, -11.2177, -11.0399, -11.1755, -11.0855, -11.4278, -11.4093, -12.2184, -10.6219, -12.0062,
@@ -153,8 +153,24 @@ thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 
 #     -12.7162, -10.9860, -11.8068, -13.0786, -12.4863, -12.8726, -12.2590, -13.3431, -11.6485, -11.1929,
 #     -11.9571, -11.2089, -11.5908, -10.6035, -11.0119, -11.4163, -11.3212, -12.0278, -11.1372, -10.8733,
 #     -10.8399, -10.5011, -10.3708, -10.1331, -12.8212, -11.9515, -11.6880]]), axis=2)
+# # Alpha0 Best (obj=4.25) Prior 100 Samples, Conv=12 iteration
+# thresholds_vector = tf.expand_dims(tf.constant([[
+#     -17.8854, -9.4539, -9.4791, -13.1848, -11.0336, -11.9209, -8.5499, -10.5234, -10.4271, -5.6685,
+#     -11.1677, -11.5988, -8.7806, -7.5654, -12.0824, -14.2640, -12.6495, -16.6190, -11.0018, -13.9772,
+#     -15.8582, -13.2863, -14.1776, -16.9332, -10.9502, -13.0153, -19.2135, -10.1767, -16.8929, -15.8353,
+#     -16.3224, -17.4345, -16.4506, -10.9776, -14.4756, -15.9219, -9.1737, -14.9278, -12.6304, -15.2616,
+#     -13.3714, -14.2830, -11.9157, -6.8283, -14.3367, -9.9049, -9.8658, -12.6146, -9.7384, -20.0000,
+#     -11.0943, -10.9363, -8.6340, -18.9967, -11.5246, -9.7616, -13.8120]]), axis=2)
+# # Alpha0 Best (obj=4.38) Prior 10 Samples, Conv=87 iteration
+# thresholds_vector = tf.expand_dims(tf.constant([[
+#     -10.3880, -11.8656, -8.4450, -9.6416, -12.3494, -12.6116, -13.1525, -8.1483, -6.2037, -12.0238,
+#     -16.7546, -10.4382, -16.4421, -12.4107, -7.7354, -15.5453, -12.4585, -10.6431, -8.5589, -14.8781,
+#     -11.1268, -20.0000, -13.5887, -11.0192, -12.4746, -18.8040, -17.5402, -12.5159, -14.4176, -12.0680,
+#     -17.5052, -11.8985, -14.5481, -11.9025, -9.9494, -16.2046, -11.6084, -11.8343, -9.4652, -10.8830,
+#     -11.6276, -11.3310, -20.0000, -10.2057, -12.5624, -9.1117, -12.4416, -12.8117, -11.1497, -12.1028,
+#     -10.3262, -12.7240, -12.2944, -7.8598, -9.3449, -10.8159, -12.2266]]), axis=2)
 Ptx_thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 46.0, 46.0, tf.float32), axis=0),axis=2)
-obj_vector = torch.tensor([[-2.13]], dtype=torch.double)
+obj_vector = torch.tensor([[-1.15]], dtype=torch.double)
 
 # Creat the training data-set
 train_x, train_obj = generate_initial_data(thresholds_vector, Ptx_thresholds_vector, obj_vector,data_size)
@@ -190,7 +206,7 @@ for i in tqdm(range(BO_itertions)):
     sinr_TN_GUEs = SINR.sinr_TN(LSG_GUEs, P_Tx_TN)
 
     # BO objective
-    Rate_sumOftheLog_Obj, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN,alpha=0.0)
+    Rate_sumOftheLog_Obj, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN,alpha=0.5)
     Rate_obj = Rate_sumOftheLog_Obj[0].__float__()
     new_obj = torch.tensor([[Rate_obj]], dtype=torch.double)
 
@@ -223,11 +239,11 @@ for i in tqdm(range(BO_itertions)):
                "optimum_thresholds": optimum_thresholds.numpy(),
                "best_rate_so_far": best_rate_so_far.numpy(),
                "Full_tilts": Full_tilts.numpy()}
-    file_name = "2023_07_07_HighDim_BO_tilt_Alpha0_GUEs_Product_Rate_iteration{}_set1.mat".format(i)
+    file_name = "2023_07_14_HighDim_BO_tilt_AlphaHalf_Mix_Product_Rate_10Samples_iteration{}_set1.mat".format(i)
     savemat(file_name, data_BO)
 
     # d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
     #       "SINR_GUEs": 10 * np.log10(sinr_total_GUEs.numpy()),
     #       "Rate_UAVs": Rate_UAVs.numpy(),
     #       "Rate_GUEs": Rate_GUEs.numpy()}
-    # savemat("2023_06_20_SINRgi_Rate_Alpha0_ProductRateObj.mat", d)
+    # savemat("2023_06_20_SINR_Rate_Alpha0_ProductRateObj.mat", d)
