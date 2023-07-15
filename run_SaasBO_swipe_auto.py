@@ -51,7 +51,7 @@ def generate_initial_data(thresholds_vector, Ptx_thresholds_vector, obj_vector, 
     for j in range(data_size):
 
         #Setting Random tilts for creating a data set
-        BS_tilt = tf.random.uniform(thresholds_vector.shape, -20, 30)
+        BS_tilt = tf.random.uniform(thresholds_vector.shape, -20, 20)
         new_train_x = torch.from_numpy(BS_tilt[:,:,0].numpy()).double()
         # BS_tilt = thresholds_vector  # This is for getting the SINR for the opt thresholds after finishing
         BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
@@ -97,13 +97,14 @@ def generate_initial_data(thresholds_vector, Ptx_thresholds_vector, obj_vector, 
 ########################################################
 def initialize_model(train_x, train_obj):
 
-    WARMUP_STEPS = 256
-    NUM_SAMPLES = 128
+    WARMUP_STEPS =  512  #256
+    NUM_SAMPLES = 256
     THINNING = 16
 
     model = SaasFullyBayesianSingleTaskGP(
         train_X=train_x,
         train_Y=train_obj,
+        train_Yvar=torch.full_like(train_Y, 1e-6),
         outcome_transform=Standardize(m=1),)
 
     fit_fully_bayesian_model_nuts(
@@ -121,7 +122,7 @@ def optimize_qEI_and_get_observation(model, train_obj):
 
     DIM = 57
     lower_bound = -20.0
-    upper_bound = 30.0
+    upper_bound = 20.0
     bounds = torch.cat((torch.zeros(1, DIM)+lower_bound, torch.zeros(1, DIM)+upper_bound))
 
     EI = qExpectedImprovement(model=model, best_f=train_obj.max())
@@ -140,8 +141,8 @@ def optimize_qEI_and_get_observation(model, train_obj):
 
 # Run BO loop
 ########################################################
-BO_itertions = 250
-data_size = 10
+BO_itertions = 400
+data_size = 100
 
 #Initial tilts and powers and obj value
 thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 0.0, tf.float32), axis=0),axis=2)
@@ -239,7 +240,7 @@ for i in tqdm(range(BO_itertions)):
                "optimum_thresholds": optimum_thresholds.numpy(),
                "best_rate_so_far": best_rate_so_far.numpy(),
                "Full_tilts": Full_tilts.numpy()}
-    file_name = "2023_07_14_HighDim_BO_tilt_AlphaHalf_Mix_Product_Rate_10Samples_iteration{}_set1.mat".format(i)
+    file_name = "2023_07_16_HighDim_BO_tilt_AlphaHalf_Mix_Product_Rate_100Samples_iteration{}_set1.mat".format(i)
     savemat(file_name, data_BO)
 
     # d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
