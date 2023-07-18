@@ -219,7 +219,6 @@ for i in tqdm(range(BO_itertions)):
                "best_rate_so_far": best_rate_so_far.numpy(),
                "Full_tilts": Full_tilts.numpy()}
     file_name = "2023_07_18_HighDim_BO_TiltandPower_AlphaHalf_Mix_Product_Rate_Corr_400Samples_iteration{}_set1.mat".format(i)
-    # file_name = "2023_07_18_test_iteration{}_set1.mat".format(i)
     savemat(file_name, data_BO)
 
     # d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),

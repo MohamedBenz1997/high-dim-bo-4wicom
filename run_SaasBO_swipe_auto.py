@@ -1,5 +1,5 @@
 """
-This is the Runner script for BO auto swiping over 2-thresholds over the entire tier
+This is the Runner script for Multi-BO auto swiping
 @authors: Mohamed Benzaghta
 """
 
@@ -40,9 +40,10 @@ SINR = SINR()
 config = Config()
 plot = Plot()
 
-# Genrating data-sets for BO
+# Generating data-sets for BO
 ########################################################
 def generate_initial_data(thresholds_vector, Ptx_thresholds_vector, obj_vector, data_size):
+
     #If optimizing tilts
     train_x = thresholds_vector[:, :, 0]
     # If optimizing powers
@@ -53,7 +54,7 @@ def generate_initial_data(thresholds_vector, Ptx_thresholds_vector, obj_vector, 
     for j in range(data_size):
 
         #Setting Random tilts for creating a data set
-        BS_tilt = tf.random.uniform(thresholds_vector.shape, -20, 0)
+        BS_tilt = tf.random.uniform(thresholds_vector.shape, -18, 36)
         new_train_x = torch.from_numpy(BS_tilt[:,:,0].numpy()).double()
         # BS_tilt = thresholds_vector  # This is for getting the SINR for the opt thresholds after finishing
         BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
@@ -78,8 +79,8 @@ def generate_initial_data(thresholds_vector, Ptx_thresholds_vector, obj_vector, 
         sinr_TN_GUEs = SINR.sinr_TN(LSG_GUEs, P_Tx_TN)
 
         # BO objective: Sum of log of the RSS
-        SINR_sumOftheLog_Obj, Rate_sumOftheLog_Obj, sinr_total_UAVs, sinr_total_GUEs = SINR.BO_Multi_Obj_Cooridor(sinr_TN_UAVs_Corridors, sinr_TN_GUEs, alpha=0.0)
-        Rate_sumOftheLog_Obj, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN,alpha=0.0)
+        SINR_sumOftheLog_Obj, Rate_sumOftheLog_Obj, sinr_total_UAVs, sinr_total_GUEs = SINR.BO_Multi_Obj_Cooridor(sinr_TN_UAVs_Corridors, sinr_TN_GUEs, alpha=0.5)
+        Rate_sumOftheLog_Obj, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN,alpha=0.5)
         Rate_obj = Rate_sumOftheLog_Obj[0].__float__()
         new_obj = torch.tensor([[Rate_obj]], dtype=torch.double)
 
@@ -97,61 +98,23 @@ def generate_initial_data(thresholds_vector, Ptx_thresholds_vector, obj_vector, 
 
     return train_x, train_obj
 
-# Creating the surrogate model
-########################################################
-# def initialize_model(train_x, train_obj):
-#
-#     WARMUP_STEPS = 256 #512  #256
-#     NUM_SAMPLES = 128 #256  #128
-#     THINNING = 16
-#
-#     model = SaasFullyBayesianSingleTaskGP(
-#         train_X=train_x,
-#         train_Y=train_obj,
-#         train_Yvar=torch.full_like(train_obj, 1e-6),
-#         outcome_transform=Standardize(m=1),)
-#
-#     fit_fully_bayesian_model_nuts(
-#         model,
-#         warmup_steps=WARMUP_STEPS,
-#         num_samples=NUM_SAMPLES,
-#         thinning=THINNING,
-#         disable_progbar=True,)
-#
-#     return model
-
-# Optimizes the qEI acquisition function, and returns a new candidate and observation
-########################################################
-# def optimize_qEI_and_get_observation(model, train_obj):
-#
-#     DIM = 57
-#     lower_bound = -20.0
-#     upper_bound = 0.0
-#     bounds = torch.cat((torch.zeros(1, DIM)+lower_bound, torch.zeros(1, DIM)+upper_bound))
-#
-#     EI = qExpectedImprovement(model=model, best_f=train_obj.max())
-#     candidates, acq_values = optimize_acqf(
-#         EI,
-#         bounds=bounds,
-#         q=1,
-#         num_restarts=10,
-#         raw_samples=1024,)
-#
-#     BS_tilt = tf.constant(candidates.numpy())
-#     BS_tilt = tf.expand_dims(BS_tilt,axis=2)
-#     BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
-#
-#     return candidates, BS_tilt
-
 # Run BO loop
 ########################################################
-BO_itertions = 20
-data_size = 100
+BO_itertions = 100
+data_size = 912
 
 #Initial tilts and powers and obj value
 thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 0.0, tf.float32), axis=0),axis=2)
+# # Alpha 0.5 Best Corridors, Globecom Framework
+# thresholds_vector = tf.expand_dims(tf.constant([[
+#     -9.8102,  -13.0183, -14.1928,  25.8687,  30.4193,  25.6352,  25.0205, -15.3203,  30.6154, -14.3594,
+#     -11.5712, -10.3334,  20.0784, -16.5769, -10.7310,  15.6762,  27.6900,  29.1826,  21.9059, -11.7631,
+#     -11.7591, -10.5255,  32.6864, -10.7251, -12.0509, -13.0080, -12.0201, -14.8350, -15.3849,  16.8090,
+#     -12.3643,  34.8795, -12.1392, -13.2892, -12.7744, -16.7355, -11.6496, -12.2563, -6.8718, -11.0011,
+#     -7.4486, -12.0740, -9.2410, -11.0125,   35.9105, -10.4298, -10.2161, -18.3366, -15.8579, -8.7873,
+#     -11.3935,  -9.9674, -14.7851, -10.5096, -10.6762, -11.3624, -14.8511]]), axis=2)
 Ptx_thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 46.0, 46.0, tf.float32), axis=0),axis=2)
-obj_vector = torch.tensor([[-1.35]], dtype=torch.double)
+obj_vector = torch.tensor([[-4.66]], dtype=torch.double)
 
 # Creat the training data-set
 train_x, train_obj = generate_initial_data(thresholds_vector, Ptx_thresholds_vector, obj_vector,data_size)
@@ -162,12 +125,13 @@ train_x, train_obj = generate_initial_data(thresholds_vector, Ptx_thresholds_vec
 # train_x = loaded_data["train_x"]
 # train_obj = loaded_data["train_obj"]
 
-#Start iterating
+#Start BO iterating
 for i in tqdm(range(BO_itertions)):
 
-    #Surrogate Model
-    WARMUP_STEPS = 256 #512  #256
-    NUM_SAMPLES = 128 #256  #128
+    # Creating the surrogate model
+    ########################################################
+    WARMUP_STEPS = 512  #256
+    NUM_SAMPLES = 256  #128
     THINNING = 16
 
     model = SaasFullyBayesianSingleTaskGP(
@@ -182,13 +146,12 @@ for i in tqdm(range(BO_itertions)):
         num_samples=NUM_SAMPLES,
         thinning=THINNING,
         disable_progbar=True,)
-    # model = initialize_model(train_x, train_obj)
 
-    #Obtain tilit candidate via acquetion function
-    # candidates, BS_tilt = optimize_qEI_and_get_observation(model, train_obj)
+    # Optimizes the qEI acquisition function, and returns a new candidate
+    ########################################################
     DIM = 57
-    lower_bound = -20.0
-    upper_bound = 0.0
+    lower_bound = -18.0
+    upper_bound = 36.0
     bounds = torch.cat((torch.zeros(1, DIM)+lower_bound, torch.zeros(1, DIM)+upper_bound))
 
     EI = qExpectedImprovement(model=model, best_f=train_obj.max())
@@ -202,13 +165,12 @@ for i in tqdm(range(BO_itertions)):
     BS_tilt = tf.constant(candidates.numpy())
     BS_tilt = tf.expand_dims(BS_tilt,axis=2)
     BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
-    #Obtain power candidate via acquetion function
-    # candidates, P_Tx_TN = optimize_qEI_and_get_observation(model, train_obj)
+
 
     #Run simulator based on new candidates
+    ########################################################
     #If tilts are not being optimized
     # BS_tilt = tf.tile(thresholds_vector, [2 * config.batch_num, 1, config.Nuser_drop])
-
     #If power is not being optimized
     P_Tx_TN = tf.tile(Ptx_thresholds_vector, [2 * config.batch_num, 1, config.Nuser_drop])
 
@@ -224,7 +186,7 @@ for i in tqdm(range(BO_itertions)):
     sinr_TN_GUEs = SINR.sinr_TN(LSG_GUEs, P_Tx_TN)
 
     # BO objective
-    Rate_sumOftheLog_Obj, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN,alpha=0.0)
+    Rate_sumOftheLog_Obj, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN,alpha=0.5)
     Rate_obj = Rate_sumOftheLog_Obj[0].__float__()
     new_obj = torch.tensor([[Rate_obj]], dtype=torch.double)
 
@@ -257,8 +219,7 @@ for i in tqdm(range(BO_itertions)):
                "optimum_thresholds": optimum_thresholds.numpy(),
                "best_rate_so_far": best_rate_so_far.numpy(),
                "Full_tilts": Full_tilts.numpy()}
-    # file_name = "2023_07_17_HighDim_BO_power_AlphaHalf_Mix_Product_Rate_Corr_200Samples_36to46_iteration{}_set1.mat".format(i)
-    file_name = "2023_07_18_GUE_test_iteration{}_set1.mat".format(i)
+    file_name = "2023_07_19_HighDim_BO_AlphaHalf_Mix_Product_Rate_Corr_912Samples_iteration{}_set1.mat".format(i)
     savemat(file_name, data_BO)
 
     # d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
