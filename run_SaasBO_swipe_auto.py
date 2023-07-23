@@ -54,7 +54,23 @@ def generate_initial_data(thresholds_vector, Ptx_thresholds_vector, obj_vector, 
     for j in range(data_size):
 
         #Setting Random tilts for creating a data set
-        BS_tilt = tf.random.uniform(thresholds_vector.shape, -18, 36)
+        # BS_tilt = tf.random.uniform(thresholds_vector.shape, -18, 36)
+        # Different sets of samples in the initial data-set
+        if j>=0 and j<=24:
+            BS_tilt = tf.random.uniform(thresholds_vector.shape, -18.0, -5.0)
+        elif j>=25 and j<=49:
+            BS_tilt = tf.random.uniform(thresholds_vector.shape, 15.0, 36.0)
+        elif j >= 50 and j <= 74:
+            BS_tilt = tf.random.uniform(thresholds_vector.shape, -15.0, 30.0)
+        elif j >= 75 and j <= 100:
+            BS_tilt = tf.random.uniform(thresholds_vector.shape, -18.0, 36.0)
+            # Define the excluded range
+            excluded_range = tf.constant([-5.0, 20.0])
+            # Mask out values within the excluded range
+            condition = tf.logical_and(BS_tilt >= excluded_range[0], BS_tilt <= excluded_range[1])
+            replacement_values = tf.random.uniform(tf.shape(BS_tilt), -18.0, -6.0)
+            BS_tilt = tf.where(condition, replacement_values, BS_tilt)
+
         new_train_x = torch.from_numpy(BS_tilt[:,:,0].numpy()).double()
         # BS_tilt = thresholds_vector  # This is for getting the SINR for the opt thresholds after finishing
         BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
@@ -94,14 +110,15 @@ def generate_initial_data(thresholds_vector, Ptx_thresholds_vector, obj_vector, 
 
     # Save the torch tensors to a file with .pt extension to be loaded using python later
     # file_name = "2023_07_14_AlphaHalf_Mix_Product_Rate_DataSet.pt"
+    # file_name = "2023_07_23_dataSet_test.pt"
     # torch.save({"train_x": train_x, "train_obj": train_obj}, file_name)
 
     return train_x, train_obj
 
 # Run BO loop
 ########################################################
-BO_itertions = 100
-data_size = 912
+BO_itertions = 300
+data_size = 100
 
 #Initial tilts and powers and obj value
 thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 0.0, tf.float32), axis=0),axis=2)
@@ -219,7 +236,7 @@ for i in tqdm(range(BO_itertions)):
                "optimum_thresholds": optimum_thresholds.numpy(),
                "best_rate_so_far": best_rate_so_far.numpy(),
                "Full_tilts": Full_tilts.numpy()}
-    file_name = "2023_07_19_HighDim_BO_AlphaHalf_Mix_Product_Rate_Corr_912Samples_iteration{}_set1.mat".format(i)
+    file_name = "2023_07_23_HighDim_BO_AlphaHalf_Mix_Product_Rate_Corr_100Samples_Alpha1_4DataSets_iteration{}.mat".format(i)
     savemat(file_name, data_BO)
 
     # d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
