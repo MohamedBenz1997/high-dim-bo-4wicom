@@ -11,6 +11,7 @@ import torch
 from scipy.io import savemat
 from tqdm import tqdm
 import numpy as np
+import random
 
 from TerrestrialClass import Terrestrial
 from SinrClass import SINR
@@ -53,23 +54,35 @@ def generate_initial_data(thresholds_vector, Ptx_thresholds_vector, obj_vector, 
 
     for j in range(data_size):
 
-        #Setting Random tilts for creating a data set
-        # BS_tilt = tf.random.uniform(thresholds_vector.shape, -18, 36)
-        # Different sets of samples in the initial data-set
-        if j>=0 and j<=24:
-            BS_tilt = tf.random.uniform(thresholds_vector.shape, -18.0, -5.0)
-        elif j>=25 and j<=49:
-            BS_tilt = tf.random.uniform(thresholds_vector.shape, 15.0, 36.0)
-        elif j >= 50 and j <= 74:
-            BS_tilt = tf.random.uniform(thresholds_vector.shape, -15.0, 30.0)
-        elif j >= 75 and j <= 100:
-            BS_tilt = tf.random.uniform(thresholds_vector.shape, -18.0, 36.0)
-            # Define the excluded range
-            excluded_range = tf.constant([-5.0, 20.0])
-            # Mask out values within the excluded range
-            condition = tf.logical_and(BS_tilt >= excluded_range[0], BS_tilt <= excluded_range[1])
-            replacement_values = tf.random.uniform(tf.shape(BS_tilt), -18.0, -6.0)
-            BS_tilt = tf.where(condition, replacement_values, BS_tilt)
+        ##Setting Random tilts for all BSs creating a data set
+        # BS_tilt = tf.random.uniform(thresholds_vector.shape, -18, 32)
+        ########################################################
+        ##Different sets of samples in the initial data-set
+        ########################################################
+        # if j>=0 and j<=24:
+        #     BS_tilt = tf.random.uniform(thresholds_vector.shape, -18.0, -5.0)
+        # elif j>=25 and j<=49:
+        #     BS_tilt = tf.random.uniform(thresholds_vector.shape, 15.0, 36.0)
+        # elif j >= 50 and j <= 74:
+        #     BS_tilt = tf.random.uniform(thresholds_vector.shape, -15.0, 30.0)
+        # elif j >= 75 and j <= 100:
+        #     BS_tilt = tf.random.uniform(thresholds_vector.shape, -18.0, 36.0)
+        #     # Define the excluded range
+        #     excluded_range = tf.constant([-5.0, 20.0])
+        #     # Mask out values within the excluded range
+        #     condition = tf.logical_and(BS_tilt >= excluded_range[0], BS_tilt <= excluded_range[1])
+        #     replacement_values = tf.random.uniform(tf.shape(BS_tilt), -18.0, -6.0)
+        #     BS_tilt = tf.where(condition, replacement_values, BS_tilt)
+        ########################################################
+        ##DataSets containing only 1-uptilited BS and other downtilted. 4 different uptilts for each BSs resulting in 4*57=228 samples in the initial dataset
+        idx_1 = j % 57
+        BS_tilt = tf.random.uniform(thresholds_vector[0,:,0].shape, -18.0, -10.0)
+        indx = tf.constant([[idx_1]])
+
+        Uptilt_value = tf.constant([random.uniform(20.0, 32.0)])
+        BS_tilt = tf.tensor_scatter_nd_update(BS_tilt, indx, Uptilt_value)
+        BS_tilt = tf.expand_dims(tf.expand_dims(BS_tilt,axis=0),axis=2)
+        ########################################################
 
         new_train_x = torch.from_numpy(BS_tilt[:,:,0].numpy()).double()
         # BS_tilt = thresholds_vector  # This is for getting the SINR for the opt thresholds after finishing
@@ -110,15 +123,15 @@ def generate_initial_data(thresholds_vector, Ptx_thresholds_vector, obj_vector, 
 
     # Save the torch tensors to a file with .pt extension to be loaded using python later
     # file_name = "2023_07_14_AlphaHalf_Mix_Product_Rate_DataSet.pt"
-    # file_name = "2023_07_23_dataSet_test.pt"
+    # file_name = "2023_08_01_dataSet_test.pt"
     # torch.save({"train_x": train_x, "train_obj": train_obj}, file_name)
 
     return train_x, train_obj
 
 # Run BO loop
 ########################################################
-BO_itertions = 300
-data_size = 100
+BO_itertions = 200
+data_size = 228
 
 #Initial tilts and powers and obj value
 thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 0.0, tf.float32), axis=0),axis=2)
@@ -130,11 +143,13 @@ thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 
 #     -12.3643,  34.8795, -12.1392, -13.2892, -12.7744, -16.7355, -11.6496, -12.2563, -6.8718, -11.0011,
 #     -7.4486, -12.0740, -9.2410, -11.0125,   35.9105, -10.4298, -10.2161, -18.3366, -15.8579, -8.7873,
 #     -11.3935,  -9.9674, -14.7851, -10.5096, -10.6762, -11.3624, -14.8511]]), axis=2)
+
 Ptx_thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 46.0, 46.0, tf.float32), axis=0),axis=2)
 obj_vector = torch.tensor([[-4.66]], dtype=torch.double)
 
 # Creat the training data-set
 train_x, train_obj = generate_initial_data(thresholds_vector, Ptx_thresholds_vector, obj_vector,data_size)
+train_x = train_x[1:,:]
 
 # # Load the training data-set
 # file_name = "2023_07_05_Alpha0_GUEs_Product_Rate_DataSet.pt"
@@ -168,7 +183,7 @@ for i in tqdm(range(BO_itertions)):
     ########################################################
     DIM = 57
     lower_bound = -18.0
-    upper_bound = 36.0
+    upper_bound = 32.0
     bounds = torch.cat((torch.zeros(1, DIM)+lower_bound, torch.zeros(1, DIM)+upper_bound))
 
     EI = qExpectedImprovement(model=model, best_f=train_obj.max())
@@ -236,11 +251,11 @@ for i in tqdm(range(BO_itertions)):
                "optimum_thresholds": optimum_thresholds.numpy(),
                "best_rate_so_far": best_rate_so_far.numpy(),
                "Full_tilts": Full_tilts.numpy()}
-    file_name = "2023_07_23_HighDim_BO_AlphaHalf_Mix_Product_Rate_Corr_100Samples_Alpha1_4DataSets_iteration{}.mat".format(i)
+    file_name = "2023_08_02_HighDim_BO_LambdaHalf_Mix_Corr_ProductRate_Alpha2_228Samples_GioDataSet_iteration{}.mat".format(i)
     savemat(file_name, data_BO)
-
+    #
     # d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
     #       "SINR_GUEs": 10 * np.log10(sinr_total_GUEs.numpy()),
     #       "Rate_UAVs": Rate_UAVs.numpy(),
     #       "Rate_GUEs": Rate_GUEs.numpy()}
-    # savemat("2023_06_20_SINR_Rate_Alpha0_ProductRateObj.mat", d)
+    # savemat("2023_07_30_SINR_Rate_LambdaHaf_ProductRateObj_HighDimBO.mat", d)
