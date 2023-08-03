@@ -53,36 +53,74 @@ def generate_initial_data(thresholds_vector, Ptx_thresholds_vector, obj_vector, 
     train_obj = obj_vector
 
     for j in range(data_size):
+        if config.Specialized_BO == False:
+            ##Setting Random tilts for all BSs creating a data set
+            # BS_tilt = tf.random.uniform(thresholds_vector.shape, -18, 32)
+            ########################################################
+            ##Different sets of samples in the initial data-set
+            ########################################################
+            if j>=0 and j<=24:
+                BS_tilt = tf.random.uniform(thresholds_vector.shape, -18.0, -10.0)
+            elif j>=25 and j<=49:
+                BS_tilt = tf.random.uniform(thresholds_vector.shape, 20.0, 32.0)
+            elif j >= 50 and j <= 74:
+                BS_tilt = tf.random.uniform(thresholds_vector.shape, -18.0, 32.0)
+            elif j >= 75 and j <= 100:
+                BS_tilt = tf.random.uniform(thresholds_vector.shape, -18.0, 32.0)
+                # Define the excluded range
+                excluded_range = tf.constant([-9.9, 19.9])
+                # Mask out values within the excluded range
+                condition = tf.logical_and(BS_tilt >= excluded_range[0], BS_tilt <= excluded_range[1])
+                replacement_values = tf.random.uniform(tf.shape(BS_tilt), -18.0, -10.0)
+                BS_tilt = tf.where(condition, replacement_values, BS_tilt)
+            ########################################################
+            ##DataSets containing only 1-uptilited BS and other downtilted. 4 different uptilts for each BSs resulting in 4*57=228 samples in the initial dataset
+            idx_1 = j % 57
+            BS_tilt = tf.random.uniform(thresholds_vector[0,:,0].shape, -18.0, -10.0)
+            indx = tf.constant([[idx_1]])
 
-        ##Setting Random tilts for all BSs creating a data set
-        # BS_tilt = tf.random.uniform(thresholds_vector.shape, -18, 32)
-        ########################################################
-        ##Different sets of samples in the initial data-set
-        ########################################################
-        # if j>=0 and j<=24:
-        #     BS_tilt = tf.random.uniform(thresholds_vector.shape, -18.0, -5.0)
-        # elif j>=25 and j<=49:
-        #     BS_tilt = tf.random.uniform(thresholds_vector.shape, 15.0, 36.0)
-        # elif j >= 50 and j <= 74:
-        #     BS_tilt = tf.random.uniform(thresholds_vector.shape, -15.0, 30.0)
-        # elif j >= 75 and j <= 100:
-        #     BS_tilt = tf.random.uniform(thresholds_vector.shape, -18.0, 36.0)
-        #     # Define the excluded range
-        #     excluded_range = tf.constant([-5.0, 20.0])
-        #     # Mask out values within the excluded range
-        #     condition = tf.logical_and(BS_tilt >= excluded_range[0], BS_tilt <= excluded_range[1])
-        #     replacement_values = tf.random.uniform(tf.shape(BS_tilt), -18.0, -6.0)
-        #     BS_tilt = tf.where(condition, replacement_values, BS_tilt)
-        ########################################################
-        ##DataSets containing only 1-uptilited BS and other downtilted. 4 different uptilts for each BSs resulting in 4*57=228 samples in the initial dataset
-        idx_1 = j % 57
-        BS_tilt = tf.random.uniform(thresholds_vector[0,:,0].shape, -18.0, -10.0)
-        indx = tf.constant([[idx_1]])
-
-        Uptilt_value = tf.constant([random.uniform(20.0, 32.0)])
-        BS_tilt = tf.tensor_scatter_nd_update(BS_tilt, indx, Uptilt_value)
-        BS_tilt = tf.expand_dims(tf.expand_dims(BS_tilt,axis=0),axis=2)
-        ########################################################
+            Uptilt_value = tf.constant([random.uniform(20.0, 32.0)])
+            BS_tilt = tf.tensor_scatter_nd_update(BS_tilt, indx, Uptilt_value)
+            BS_tilt = tf.expand_dims(tf.expand_dims(BS_tilt,axis=0),axis=2)
+            ########################################################
+        if config.Specialized_BO == True:
+            #Setting all tilts to -12 as in 3GPP
+            BS_tilt = tf.random.uniform(thresholds_vector[0, :, 0].shape, -12.0, -12.0)
+            #Randomly select indices to update
+            idxes = [3,4,5,6,7,8,12,15,16,17,18,19,20,21,22,23,25,27,32,33,34,38,39,40,41,45,48,50,51,52]
+            if j >= 0 and j <= 24:
+                # Randomly select corresponding values to update
+                Update_indices = [random.uniform(-18.0, -10.0) for _ in range(len(idxes))]
+                #Update the selected indices with the new values
+                for idx, Update_indice in zip(idxes, Update_indices):
+                    indx = tf.constant([[idx]])
+                    BS_tilt = tf.tensor_scatter_nd_update(BS_tilt, indx, tf.constant([Update_indice]))
+                #Expand dimensions to match the original shape
+                BS_tilt = tf.expand_dims(tf.expand_dims(BS_tilt, axis=0), axis=2)
+            elif j >= 25 and j <= 49:
+                Update_indices = [random.uniform(20.0, 32.0) for _ in range(len(idxes))]
+                for idx, Update_indice in zip(idxes, Update_indices):
+                    indx = tf.constant([[idx]])
+                    BS_tilt = tf.tensor_scatter_nd_update(BS_tilt, indx, tf.constant([Update_indice]))
+                BS_tilt = tf.expand_dims(tf.expand_dims(BS_tilt, axis=0), axis=2)
+            elif j >= 50 and j <= 74:
+                Update_indices = [random.uniform(-18.0, 32.0) for _ in range(len(idxes))]
+                for idx, Update_indice in zip(idxes, Update_indices):
+                    indx = tf.constant([[idx]])
+                    BS_tilt = tf.tensor_scatter_nd_update(BS_tilt, indx, tf.constant([Update_indice]))
+                BS_tilt = tf.expand_dims(tf.expand_dims(BS_tilt, axis=0), axis=2)
+            elif j >= 75 and j <= 100:
+                Update_indices = [random.uniform(-18.0, 32.0) for _ in range(len(idxes))]
+                for idx, Update_indice in zip(idxes, Update_indices):
+                    indx = tf.constant([[idx]])
+                    BS_tilt = tf.tensor_scatter_nd_update(BS_tilt, indx, tf.constant([Update_indice]))
+                BS_tilt = tf.expand_dims(tf.expand_dims(BS_tilt, axis=0), axis=2)
+                # Define the excluded range
+                excluded_range = tf.constant([-9.9, 19.9])
+                # Mask out values within the excluded range
+                condition = tf.logical_and(BS_tilt >= excluded_range[0], BS_tilt <= excluded_range[1])
+                replacement_values = tf.random.uniform(tf.shape(BS_tilt), -18.0, -10.0)
+                BS_tilt = tf.where(condition, replacement_values, BS_tilt)
 
         new_train_x = torch.from_numpy(BS_tilt[:,:,0].numpy()).double()
         # BS_tilt = thresholds_vector  # This is for getting the SINR for the opt thresholds after finishing
@@ -131,7 +169,7 @@ def generate_initial_data(thresholds_vector, Ptx_thresholds_vector, obj_vector, 
 # Run BO loop
 ########################################################
 BO_itertions = 200
-data_size = 228
+data_size = 100
 
 #Initial tilts and powers and obj value
 thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 0.0, tf.float32), axis=0),axis=2)
@@ -150,6 +188,7 @@ obj_vector = torch.tensor([[-4.66]], dtype=torch.double)
 # Creat the training data-set
 train_x, train_obj = generate_initial_data(thresholds_vector, Ptx_thresholds_vector, obj_vector,data_size)
 train_x = train_x[1:,:]
+train_obj = train_obj[1:,:]
 
 # # Load the training data-set
 # file_name = "2023_07_05_Alpha0_GUEs_Product_Rate_DataSet.pt"
@@ -163,40 +202,90 @@ for i in tqdm(range(BO_itertions)):
     # Creating the surrogate model
     ########################################################
     WARMUP_STEPS = 512  #256
-    NUM_SAMPLES = 256  #128
+    NUM_SAMPLES =  256  #128
     THINNING = 16
 
-    model = SaasFullyBayesianSingleTaskGP(
-        train_X=train_x,
-        train_Y=train_obj,
-        train_Yvar=torch.full_like(train_obj, 1e-6),
-        outcome_transform=Standardize(m=1),)
+    if config.Specialized_BO == False:
 
-    fit_fully_bayesian_model_nuts(
-        model,
-        warmup_steps=WARMUP_STEPS,
-        num_samples=NUM_SAMPLES,
-        thinning=THINNING,
-        disable_progbar=True,)
+        train_x_org = train_x
 
-    # Optimizes the qEI acquisition function, and returns a new candidate
-    ########################################################
-    DIM = 57
-    lower_bound = -18.0
-    upper_bound = 32.0
-    bounds = torch.cat((torch.zeros(1, DIM)+lower_bound, torch.zeros(1, DIM)+upper_bound))
+        model = SaasFullyBayesianSingleTaskGP(
+            train_X=train_x,
+            train_Y=train_obj,
+            train_Yvar=torch.full_like(train_obj, 1e-6),
+            outcome_transform=Standardize(m=1),)
 
-    EI = qExpectedImprovement(model=model, best_f=train_obj.max())
-    candidates, acq_values = optimize_acqf(
-        EI,
-        bounds=bounds,
-        q=1,
-        num_restarts=10,
-        raw_samples=1024,)
+        fit_fully_bayesian_model_nuts(
+            model,
+            warmup_steps=WARMUP_STEPS,
+            num_samples=NUM_SAMPLES,
+            thinning=THINNING,
+            disable_progbar=True,)
 
-    BS_tilt = tf.constant(candidates.numpy())
-    BS_tilt = tf.expand_dims(BS_tilt,axis=2)
-    BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
+        # Optimizes the qEI acquisition function, and returns a new candidate
+        ########################################################
+        DIM = 57
+        lower_bound = -18.0
+        upper_bound = 32.0
+        bounds = torch.cat((torch.zeros(1, DIM)+lower_bound, torch.zeros(1, DIM)+upper_bound))
+
+        EI = qExpectedImprovement(model=model, best_f=train_obj.max())
+        candidates, acq_values = optimize_acqf(
+            EI,
+            bounds=bounds,
+            q=1,
+            num_restarts=10,
+            raw_samples=1024,)
+
+        BS_tilt = tf.constant(candidates.numpy())
+        BS_tilt = tf.expand_dims(BS_tilt,axis=2)
+        BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
+
+    elif config.Specialized_BO == True:
+
+        idxes = [3, 4, 5, 6, 7, 8, 12, 15, 16, 17, 18, 19, 20, 21, 22, 23, 25, 27, 32, 33, 34, 38, 39, 40, 41, 45, 48,50, 51, 52]
+        train_x_org = train_x.to(torch.float32)
+        train_x = train_x[:, idxes]
+
+        model = SaasFullyBayesianSingleTaskGP(
+            train_X=train_x,
+            train_Y=train_obj,
+            train_Yvar=torch.full_like(train_obj, 1e-6),
+            outcome_transform=Standardize(m=1), )
+
+        fit_fully_bayesian_model_nuts(
+            model,
+            warmup_steps=WARMUP_STEPS,
+            num_samples=NUM_SAMPLES,
+            thinning=THINNING,
+            disable_progbar=True, )
+
+        # Optimizes the qEI acquisition function, and returns a new candidate
+        ########################################################
+        DIM = 30
+        lower_bound = -18.0
+        upper_bound = 32.0
+        bounds = torch.cat((torch.zeros(1, DIM) + lower_bound, torch.zeros(1, DIM) + upper_bound))
+
+        EI = qExpectedImprovement(model=model, best_f=train_obj.max())
+        candidates, acq_values = optimize_acqf(
+            EI,
+            bounds=bounds,
+            q=1,
+            num_restarts=10,
+            raw_samples=1024, )
+
+        #Combining the optimizng indexes and non-optimized indexes together, for the simulator to run
+        combined_opt_nonOpt_train_x = torch.zeros_like(train_x_org, dtype=torch.float32)
+        combined_opt_nonOpt_train_x[:, idxes] = candidates
+        none_optimized_indexes = list(set(range(train_x_org.shape[1])) - set(idxes))
+        combined_opt_nonOpt_train_x[:, none_optimized_indexes] = train_x_org[:, none_optimized_indexes]
+        candidates = combined_opt_nonOpt_train_x
+        candidates = candidates[0, :].view(1, 57)
+
+        BS_tilt = tf.constant(candidates.numpy())
+        BS_tilt = tf.expand_dims(BS_tilt, axis=2)
+        BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
 
 
     #Run simulator based on new candidates
@@ -223,18 +312,19 @@ for i in tqdm(range(BO_itertions)):
     new_obj = torch.tensor([[Rate_obj]], dtype=torch.double)
 
     # Append the thresholds and objectives
-    train_x = torch.cat((train_x, candidates), dim=0)
+    train_x = torch.cat((train_x_org, candidates), dim=0)
+    train_x = train_x.to(torch.float64)
     train_obj = torch.cat((train_obj, new_obj), dim=0)
 
     #Monitoring the progress of best observed value so far
-    best_value = tf.expand_dims(tf.reduce_max(train_obj[data_size+1:,:], axis=0), axis=0)
+    best_value = tf.expand_dims(tf.reduce_max(train_obj[data_size:,:], axis=0), axis=0)
     if i == 0:
         best_rate_so_far = tf.zeros(best_value.shape, dtype='float64')
     best_rate_so_far = tf.concat([best_rate_so_far, best_value], axis=0)
 
     # BO Outputs
-    Thresholds = train_x[data_size+1:,:]
-    Obj = train_obj[data_size+1:,:]
+    Thresholds = train_x[data_size:,:]
+    Obj = train_obj[data_size:,:]
     Thresholds = Thresholds.numpy()
     Thresholds = tf.convert_to_tensor(Thresholds)
     Obj = Obj.numpy()
@@ -251,7 +341,7 @@ for i in tqdm(range(BO_itertions)):
                "optimum_thresholds": optimum_thresholds.numpy(),
                "best_rate_so_far": best_rate_so_far.numpy(),
                "Full_tilts": Full_tilts.numpy()}
-    file_name = "2023_08_02_HighDim_BO_LambdaHalf_Mix_Corr_ProductRate_Alpha2_228Samples_GioDataSet_iteration{}.mat".format(i)
+    file_name = "2023_08_04_HighDim_BO_LambdaHalf_Mix_Corr_ProductRate_Alpha2_100Samples_4DataSets_Set3_SelectedTilts_iteration{}.mat".format(i)
     savemat(file_name, data_BO)
     #
     # d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),

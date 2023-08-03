@@ -132,6 +132,9 @@ class Config():
         # --------- Tilt-optimization
         # self.BS_tilt=-40.0 #minus sign refer to being down-tilted
 
+        # --------- Specialized BO
+        self.Specialized_BO = True
+
 
         return
 
