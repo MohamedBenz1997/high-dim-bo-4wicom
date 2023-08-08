@@ -59,29 +59,32 @@ def generate_initial_data(thresholds_vector, Ptx_thresholds_vector, obj_vector, 
             ########################################################
             ##Different sets of samples in the initial data-set
             ########################################################
-            if j>=0 and j<=24:
-                BS_tilt = tf.random.uniform(thresholds_vector.shape, -18.0, -10.0)
-            elif j>=25 and j<=49:
-                BS_tilt = tf.random.uniform(thresholds_vector.shape, 20.0, 32.0)
-            elif j >= 50 and j <= 74:
-                BS_tilt = tf.random.uniform(thresholds_vector.shape, -18.0, 32.0)
-            elif j >= 75 and j <= 100:
-                BS_tilt = tf.random.uniform(thresholds_vector.shape, -18.0, 32.0)
-                # Define the excluded range
-                excluded_range = tf.constant([-9.9, 19.9])
-                # Mask out values within the excluded range
-                condition = tf.logical_and(BS_tilt >= excluded_range[0], BS_tilt <= excluded_range[1])
-                replacement_values = tf.random.uniform(tf.shape(BS_tilt), -18.0, -10.0)
-                BS_tilt = tf.where(condition, replacement_values, BS_tilt)
+            # if j>=0 and j<=24:
+            #     BS_tilt = tf.random.uniform(thresholds_vector.shape, -18.0, -10.0)
+            # elif j>=25 and j<=49:
+            #     BS_tilt = tf.random.uniform(thresholds_vector.shape, 20.0, 32.0)
+            # elif j >= 50 and j <= 74:
+            #     BS_tilt = tf.random.uniform(thresholds_vector.shape, -18.0, 32.0)
+            # elif j >= 75 and j <= 100:
+            #     BS_tilt = tf.random.uniform(thresholds_vector.shape, -18.0, 32.0)
+            #     # Define the excluded range
+            #     excluded_range = tf.constant([-9.9, 19.9])
+            #     # Mask out values within the excluded range
+            #     condition = tf.logical_and(BS_tilt >= excluded_range[0], BS_tilt <= excluded_range[1])
+            #     replacement_values = tf.random.uniform(tf.shape(BS_tilt), -18.0, -10.0)
+            #     BS_tilt = tf.where(condition, replacement_values, BS_tilt)
             ########################################################
             ##DataSets containing only 1-uptilited BS and other downtilted. 4 different uptilts for each BSs resulting in 4*57=228 samples in the initial dataset
-            idx_1 = j % 57
-            BS_tilt = tf.random.uniform(thresholds_vector[0,:,0].shape, -18.0, -10.0)
-            indx = tf.constant([[idx_1]])
-
-            Uptilt_value = tf.constant([random.uniform(20.0, 32.0)])
-            BS_tilt = tf.tensor_scatter_nd_update(BS_tilt, indx, Uptilt_value)
-            BS_tilt = tf.expand_dims(tf.expand_dims(BS_tilt,axis=0),axis=2)
+            # idx_1 = j % 57
+            # BS_tilt = tf.random.uniform(thresholds_vector[0,:,0].shape, -18.0, -10.0)
+            # indx = tf.constant([[idx_1]])
+            #
+            # Uptilt_value = tf.constant([random.uniform(20.0, 32.0)])
+            # BS_tilt = tf.tensor_scatter_nd_update(BS_tilt, indx, Uptilt_value)
+            # BS_tilt = tf.expand_dims(tf.expand_dims(BS_tilt,axis=0),axis=2)
+            ########################################################
+            ##Setting Random noise of +- 5deg to iterative BO opt config
+            BS_tilt = thresholds_vector + tf.random.uniform(thresholds_vector.shape, -5.0, 5.0)
             ########################################################
         if config.Specialized_BO == True:
             #Setting all tilts to -12 as in 3GPP
@@ -173,7 +176,7 @@ data_size = 100
 
 #Initial tilts and powers and obj value
 thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 0.0, tf.float32), axis=0),axis=2)
-# # Alpha 0.5 Best Corridors, Globecom Framework
+# Alpha 0.5 Best Corridors, Globecom Framework
 # thresholds_vector = tf.expand_dims(tf.constant([[
 #     -9.8102,  -13.0183, -14.1928,  25.8687,  30.4193,  25.6352,  25.0205, -15.3203,  30.6154, -14.3594,
 #     -11.5712, -10.3334,  20.0784, -16.5769, -10.7310,  15.6762,  27.6900,  29.1826,  21.9059, -11.7631,
@@ -181,6 +184,15 @@ thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 
 #     -12.3643,  34.8795, -12.1392, -13.2892, -12.7744, -16.7355, -11.6496, -12.2563, -6.8718, -11.0011,
 #     -7.4486, -12.0740, -9.2410, -11.0125,   35.9105, -10.4298, -10.2161, -18.3366, -15.8579, -8.7873,
 #     -11.3935,  -9.9674, -14.7851, -10.5096, -10.6762, -11.3624, -14.8511]]), axis=2)
+
+# # Alpha 0.5 Best Corridors, High-dim Framework, only problamatic cells
+# thresholds_vector = tf.expand_dims(tf.constant([[
+#     -12.0000, - 12.0000, - 12.0000,   23.6723,   27.9053,   32.0000,   25.7613, - 12.0000,   32.0000, - 12.0000,
+#     - 12.0000, - 12.0000,   22.4880, - 12.0000, - 12.0000,   32.0000,   32.0000,   26.0659,   24.4629, - 12.0000,
+#     - 12.0000, - 12.0000,   28.3232, - 12.0000, - 12.0000, - 12.0000, - 12.0000, - 12.0000, - 12.0000,   32.0000,
+#     - 12.0000,   32.0000, - 12.0000, - 12.0000, - 12.0000, - 12.0000, - 12.0000, - 12.0000, - 12.0000, - 12.0000,
+#     - 12.0000, - 12.0000, - 12.0000, - 12.0000,   32.0000, - 12.0000, - 12.0000, - 12.0000, - 12.0000, - 12.0000,
+#     - 12.0000, - 12.0000, - 12.0000, - 12.0000, - 12.0000, - 12.0000, - 12.0000]]), axis=2)
 
 Ptx_thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 46.0, 46.0, tf.float32), axis=0),axis=2)
 obj_vector = torch.tensor([[-4.66]], dtype=torch.double)
@@ -225,8 +237,8 @@ for i in tqdm(range(BO_itertions)):
         # Optimizes the qEI acquisition function, and returns a new candidate
         ########################################################
         DIM = 57
-        lower_bound = -18.0
-        upper_bound = 32.0
+        lower_bound = -25.0
+        upper_bound = 40.0
         bounds = torch.cat((torch.zeros(1, DIM)+lower_bound, torch.zeros(1, DIM)+upper_bound))
 
         EI = qExpectedImprovement(model=model, best_f=train_obj.max())
@@ -341,11 +353,11 @@ for i in tqdm(range(BO_itertions)):
                "optimum_thresholds": optimum_thresholds.numpy(),
                "best_rate_so_far": best_rate_so_far.numpy(),
                "Full_tilts": Full_tilts.numpy()}
-    file_name = "2023_08_04_HighDim_BO_LambdaHalf_Mix_Corr_ProductRate_Alpha2_100Samples_4DataSets_Set3_SelectedTilts_iteration{}.mat".format(i)
+    file_name = "2023_08_09_HighDim_BO_LambdaHalf_Mix_Corr_ProductRate_Alpha2_100Samples_NoisyIterativeDataSet_iteration{}.mat".format(i)
     savemat(file_name, data_BO)
     #
     # d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
     #       "SINR_GUEs": 10 * np.log10(sinr_total_GUEs.numpy()),
     #       "Rate_UAVs": Rate_UAVs.numpy(),
     #       "Rate_GUEs": Rate_GUEs.numpy()}
-    # savemat("2023_07_30_SINR_Rate_LambdaHaf_ProductRateObj_HighDimBO.mat", d)
+    # savemat("2023_08_08_SINR_Rate_LambdaHaf_ProductRateObj_HighDimBO_Alpha2_4Datasets_100Samples_ProblamaticCells.mat", d)
