@@ -62,18 +62,18 @@ def generate_initial_data(idx_1, thresholds_vector, Ptx_thresholds_vector, obj_v
         P_Tx_TN = Ptx_thresholds_vector[0, :, 0]
         indx = tf.constant([[idx_1]])
 
-        rand_values = tf.constant([random.uniform(-25.0, 0.0)])
+        rand_values = tf.constant([random.uniform(-25.0, 40.0)])
         new_train_x = torch.from_numpy( tf.expand_dims(rand_values, axis=0).numpy()).double()
         BS_tilt = tf.tensor_scatter_nd_update(BS_tilt, indx, rand_values)
         BS_tilt = tf.expand_dims(tf.expand_dims(BS_tilt,axis=0),axis=2)
-        BS_tilt = thresholds_vector #This is for getting the SINR for the opt thresholds after finishing
+        # BS_tilt = thresholds_vector #This is for getting the SINR for the opt thresholds after finishing
         BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
 
-        rand_values1 = tf.constant([random.uniform(26.0, 46.0)])
+        rand_values1 = tf.constant([random.uniform(40.0, 46.0)])
         new_train_x1 = torch.from_numpy( tf.expand_dims(rand_values1, axis=0).numpy()).double()
         P_Tx_TN = tf.tensor_scatter_nd_update(P_Tx_TN, indx, rand_values1)
         P_Tx_TN = tf.expand_dims(tf.expand_dims(P_Tx_TN,axis=0),axis=2)
-        P_Tx_TN = Ptx_thresholds_vector #This is for getting the SINR for the opt thresholds after finishing
+        # P_Tx_TN = Ptx_thresholds_vector #This is for getting the SINR for the opt thresholds after finishing
         P_Tx_TN = tf.tile(P_Tx_TN, [2 * config.batch_num, 1, config.Nuser_drop])
 
         new_train_x = torch.cat((new_train_x, new_train_x1), dim=1)
@@ -92,8 +92,7 @@ def generate_initial_data(idx_1, thresholds_vector, Ptx_thresholds_vector, obj_v
         sinr_TN_GUEs = SINR.sinr_TN(LSG_GUEs, P_Tx_TN)
 
         #BO objective: Sum of log of the RSS
-        SINR_sumOftheLog_Obj, Rate_sumOftheLog_Obj, sinr_total_UAVs, sinr_total_GUEs = SINR.BO_Multi_Obj_Cooridor(sinr_TN_UAVs_Corridors, sinr_TN_GUEs, alpha=0.0)
-        # Rate_sumOftheLog_Obj, Rate_GUEs, Rate_UAVs = SINR.BO_GUEs_test_Obj_Rates(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN, alpha=0.0)
+        SINR_sumOftheLog_Obj, Rate_sumOftheLog_Obj, sinr_total_UAVs, sinr_total_GUEs = SINR.BO_Multi_Obj_Cooridor(sinr_TN_UAVs_Corridors, sinr_TN_GUEs, alpha=0.5)
         Rate_sumOftheLog_Obj, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN, alpha=0.5)
         SINR_obj = Rate_sumOftheLog_Obj[0].__float__()
         Rate_obj = Rate_sumOftheLog_Obj[0].__float__()
@@ -171,9 +170,7 @@ def optimize_qnehvi_and_get_observation(model, train_x, sampler, idx_1, threshol
     sinr_TN_GUEs = SINR.sinr_TN(LSG_GUEs, P_Tx_TN)
 
     # BO objective: Sum of log of the RSS
-    # SINR_sumOftheLog_Obj, Rate_sumOftheLog_Obj, sinr_total_UAVs, sinr_total_GUEs = SINR.BO_Multi_Obj_Cooridor(sinr_TN_UAVs_Corridors, sinr_TN_GUEs, alpha=0.0)
-    Rate_sumOftheLog_Obj, Rate_GUEs, Rate_UAVs = SINR.BO_GUEs_test_Obj_Rates(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN, alpha=0.5)
-    # Rate_sumOftheLog_Obj, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN, alpha=0.0)
+    Rate_sumOftheLog_Obj, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN, alpha=0.5)
     SINR_obj = Rate_sumOftheLog_Obj[0].__float__()
     Rate_obj = Rate_sumOftheLog_Obj[0].__float__()
     new_obj1 = SINR_obj
@@ -192,8 +189,8 @@ RAW_SAMPLES = 512
 NOISE_SE = torch.tensor([0.001, 0.001], dtype=torch.double)
 
 #2Thresholds bounds
-bounds_lower = torch.tensor([[-25.0, 26.0]], dtype=torch.double) 
-bounds_higher = torch.tensor([[0.0, 46.0]], dtype=torch.double)
+bounds_lower = torch.tensor([[-25.0, 40.0]], dtype=torch.double)
+bounds_higher = torch.tensor([[40.0, 46.0]], dtype=torch.double)
 bounds = torch.cat((bounds_lower, bounds_higher), 0)
 standard_bounds_lower = torch.tensor([[0.0]], dtype=torch.double)
 standard_bounds_lower = standard_bounds_lower.tile((2,))
@@ -204,17 +201,19 @@ standard_bounds = torch.cat((standard_bounds_lower, standard_bounds_higher), 0)
 #ref_point for EHVI
 ref_point = torch.tensor([-30.0, -30.0], dtype=torch.double)
 
-for i in tqdm(range(114)): #28 for 1st swipe and odd, 29 for 2nd swipe and even
+BS_id = list(range(114))
+random.shuffle(BS_id)
+for i in tqdm(BS_id): #28 for 1st swipe and odd, 29 for 2nd swipe and even
     ## For 1st swipe
     # idx_1 = i
     idx_1 = i%57
 
     #For 1st swipe
     if i == 0:
-        thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 0.0, tf.float32), axis=0),axis=2)-12.0
+        thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 0.0, tf.float32), axis=0),axis=2)
         Ptx_thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 46.0, 46.0, tf.float32), axis=0),axis=2)#-20.0
 
-        # Alpha 0.5 Best Corridors
+        # # Alpha 0.5 Best Corridors
         # thresholds_vector = tf.expand_dims(tf.constant([[
         #     -9.8102,  -13.0183, -14.1928,  25.8687,  30.4193,  25.6352,  25.0205, -15.3203,  30.6154, -14.3594,
         #     -11.5712, -10.3334,  20.0784, -16.5769, -10.7310,  15.6762,  27.6900,  29.1826,  21.9059, -11.7631,
@@ -248,7 +247,7 @@ for i in tqdm(range(114)): #28 for 1st swipe and odd, 29 for 2nd swipe and even
         #     45.0965,   46.0000,   46.0000,   46.0000,   46.0000,   46.0000,   45.8050,   46.0000,   46.0000,   46.0000,
         #     46.0000,   42.0314,   43.8446,   46.0000,   46.0000,   46.0000,   46.0000]]), axis=2)
         
-        obj_vector = torch.tensor([[-3.80, -3.80]], dtype=torch.double)
+        obj_vector = torch.tensor([[-4.66, -4.66]], dtype=torch.double)
 
 
     #Obtain the training data-set
@@ -331,7 +330,7 @@ for i in tqdm(range(114)): #28 for 1st swipe and odd, 29 for 2nd swipe and even
                 "best_rate_so_far": best_value_qNEHVI_all.numpy(),
                 "Full_tilts": Full_tilts.numpy(),
                 "Full_powers": Full_powers.numpy()}
-    file_name = "2023_06_20_BO_tilt_power_Alpha0_GUEs_Product_Rates_with_Ouage_iteration{}_Cell{}_set1.mat".format(i,idx_1)
+    file_name = "2023_08_09_iterative_BO_LambdaHalf_Mix_Corr_ProductRate_RandomIterationsCell{}_iteration{}.mat".format(idx_1,i)
     savemat(file_name, data_BO)
     #############################################################
     # d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
@@ -345,16 +344,16 @@ for i in tqdm(range(114)): #28 for 1st swipe and odd, 29 for 2nd swipe and even
     # # savemat("2023_04_08_SINR_Cell_ID_AlphaHalf_Mix.mat", d)
     # savemat("2023_04_25_Alpha0_GUEs_Cell_ID.mat", d)
 
-    d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
-          "SINR_GUEs": 10 * np.log10(sinr_total_GUEs.numpy()),
-          "Rate_UAVs": Rate_UAVs.numpy(),
-          "Rate_GUEs": Rate_GUEs.numpy()}
-    savemat("2023_06_20_SINR_Rate_Alpha0_ProductRateObj.mat", d)
-
-    d = {"Cell_id_GUEs":BSs_id_GUEs.numpy(),
-          "GUEs_x": Xuser_GUEs_x.numpy(),
-          "GUEs_y": Xuser_GUEs_y.numpy(),
-          "Cell_id_UAVs": BSs_id_UAVs.numpy(),
-          "UAVs_x": Xuser_UAVs_x.numpy(),
-          "UAVs_y": Xuser_UAVs_y.numpy()}
-    savemat("2023_06_21_Cell_ID_Alpha0_ProductRateObj_LOS.mat", d)
+    # d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
+    #       "SINR_GUEs": 10 * np.log10(sinr_total_GUEs.numpy()),
+    #       "Rate_UAVs": Rate_UAVs.numpy(),
+    #       "Rate_GUEs": Rate_GUEs.numpy()}
+    # savemat("2023_06_20_SINR_Rate_Alpha0_ProductRateObj.mat", d)
+    #
+    # d = {"Cell_id_GUEs":BSs_id_GUEs.numpy(),
+    #       "GUEs_x": Xuser_GUEs_x.numpy(),
+    #       "GUEs_y": Xuser_GUEs_y.numpy(),
+    #       "Cell_id_UAVs": BSs_id_UAVs.numpy(),
+    #       "UAVs_x": Xuser_UAVs_x.numpy(),
+    #       "UAVs_y": Xuser_UAVs_y.numpy()}
+    # savemat("2023_06_21_Cell_ID_Alpha0_ProductRateObj_LOS.mat", d)
