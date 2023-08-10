@@ -66,14 +66,14 @@ def generate_initial_data(idx_1, thresholds_vector, Ptx_thresholds_vector, obj_v
         new_train_x = torch.from_numpy( tf.expand_dims(rand_values, axis=0).numpy()).double()
         BS_tilt = tf.tensor_scatter_nd_update(BS_tilt, indx, rand_values)
         BS_tilt = tf.expand_dims(tf.expand_dims(BS_tilt,axis=0),axis=2)
-        # BS_tilt = thresholds_vector #This is for getting the SINR for the opt thresholds after finishing
+        BS_tilt = thresholds_vector #This is for getting the SINR for the opt thresholds after finishing
         BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
 
         rand_values1 = tf.constant([random.uniform(40.0, 46.0)])
         new_train_x1 = torch.from_numpy( tf.expand_dims(rand_values1, axis=0).numpy()).double()
         P_Tx_TN = tf.tensor_scatter_nd_update(P_Tx_TN, indx, rand_values1)
         P_Tx_TN = tf.expand_dims(tf.expand_dims(P_Tx_TN,axis=0),axis=2)
-        # P_Tx_TN = Ptx_thresholds_vector #This is for getting the SINR for the opt thresholds after finishing
+        P_Tx_TN = Ptx_thresholds_vector #This is for getting the SINR for the opt thresholds after finishing
         P_Tx_TN = tf.tile(P_Tx_TN, [2 * config.batch_num, 1, config.Nuser_drop])
 
         new_train_x = torch.cat((new_train_x, new_train_x1), dim=1)
@@ -209,7 +209,7 @@ for i in tqdm(BS_id): #28 for 1st swipe and odd, 29 for 2nd swipe and even
     idx_1 = i%57
 
     #For 1st swipe
-    if i == 0:
+    if i == BS_id[0]:
         thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 0.0, tf.float32), axis=0),axis=2)
         Ptx_thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 46.0, 46.0, tf.float32), axis=0),axis=2)#-20.0
 
@@ -246,6 +246,15 @@ for i in tqdm(BS_id): #28 for 1st swipe and odd, 29 for 2nd swipe and even
         #     46.0000,   46.0000,   44.1847,   43.2014,   46.0000,   46.0000,   41.2889,   46.0000,   46.0000,   43.8008,
         #     45.0965,   46.0000,   46.0000,   46.0000,   46.0000,   46.0000,   45.8050,   46.0000,   46.0000,   46.0000,
         #     46.0000,   42.0314,   43.8446,   46.0000,   46.0000,   46.0000,   46.0000]]), axis=2)
+
+        # # Alpha 0.5 Best Corridors, random iterating
+        thresholds_vector = tf.expand_dims(tf.constant([[
+            -16.1038, - 13.4602, - 12.3521,   26.9551, - 13.2374,   29.9630, - 11.7704, - 11.2683,   23.4049, - 13.2939,
+            20.2796, - 11.8374,   18.7154, - 11.1245, - 9.9152,   16.5736, - 9.3323,   27.1126,   26.4470, - 13.1050,
+            - 9.8243,   22.4399,   34.6753, - 14.4526, - 13.2783, - 12.2372, - 10.0612, - 13.4906, - 12.2336, - 12.6344,
+            - 12.9772,   35.0441, - 16.1445, - 14.8551, - 9.5613, - 12.6463, - 13.1192, - 12.5733, - 11.2016,   24.1970,
+            - 11.0013, - 12.6641, - 8.3223, - 14.5665, - 15.3501, - 11.9199, - 11.5034, - 12.1394, - 10.4707, - 16.0768,
+            - 12.8765,   25.2399, - 10.6521,   36.5998, - 11.4342, - 10.8184, - 13.6407]]), axis=2)
         
         obj_vector = torch.tensor([[-4.66, -4.66]], dtype=torch.double)
 
@@ -348,7 +357,7 @@ for i in tqdm(BS_id): #28 for 1st swipe and odd, 29 for 2nd swipe and even
     #       "SINR_GUEs": 10 * np.log10(sinr_total_GUEs.numpy()),
     #       "Rate_UAVs": Rate_UAVs.numpy(),
     #       "Rate_GUEs": Rate_GUEs.numpy()}
-    # savemat("2023_06_20_SINR_Rate_Alpha0_ProductRateObj.mat", d)
+    # savemat("2023_08_010_SINR_Rate_LambdaHaf_ProductRateObj_IterativeBO_RandomIterations.mat", d)
     #
     # d = {"Cell_id_GUEs":BSs_id_GUEs.numpy(),
     #       "GUEs_x": Xuser_GUEs_x.numpy(),
