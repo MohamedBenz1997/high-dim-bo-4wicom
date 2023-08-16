@@ -692,6 +692,7 @@ class SINR(Config):
         Users_Outage_perBS = tf.reduce_sum(GUEs_Outage, axis=2)  + tf.reduce_sum(UAVs_Outage, axis=2)
         Outage_ratio = Users_Outage_perBS/(BS_load_combined[:,:,0]+1)
         Outage_ratio = tf.reduce_sum(tf.reduce_mean(Outage_ratio, axis=0),axis=0)
+        Avg_Users_Outage_perBS = tf.math.ceil(tf.reduce_mean(Users_Outage_perBS,axis=0))
 
         #Final Obj of sum log rates
         Rate_sumOftheLog_Obj = Rate_sumOftheLog_Obj1 - 0*Outage_ratio

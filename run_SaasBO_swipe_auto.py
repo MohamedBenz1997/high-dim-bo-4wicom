@@ -136,7 +136,7 @@ def generate_initial_data(thresholds_vector, Ptx_thresholds_vector, obj_vector, 
                 BS_tilt = tf.where(condition, replacement_values, BS_tilt)
 
         new_train_x = torch.from_numpy(BS_tilt[:,:,0].numpy()).double()
-        # BS_tilt = thresholds_vector  # This is for getting the SINR for the opt thresholds after finishing
+        BS_tilt = thresholds_vector  # This is for getting the SINR for the opt thresholds after finishing
         BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
 
         #Setting Random powers for creating a data set
@@ -187,13 +187,21 @@ data_size = 100
 #Initial tilts and powers and obj value
 # thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 0.0, tf.float32), axis=0),axis=2)
 # Alpha 0.5 Best Corridors, Globecom Framework
+# thresholds_vector = tf.expand_dims(tf.constant([[
+#     -9.8102,  -13.0183, -14.1928,  25.8687,  30.4193,  25.6352,  25.0205, -15.3203,  30.6154, -14.3594,
+#     -11.5712, -10.3334,  20.0784, -16.5769, -10.7310,  15.6762,  27.6900,  29.1826,  21.9059, -11.7631,
+#     -11.7591, -10.5255,  32.6864, -10.7251, -12.0509, -13.0080, -12.0201, -14.8350, -15.3849,  16.8090,
+#     -12.3643,  34.8795, -12.1392, -13.2892, -12.7744, -16.7355, -11.6496, -12.2563, -6.8718, -11.0011,
+#     -7.4486, -12.0740, -9.2410, -11.0125,   35.9105, -10.4298, -10.2161, -18.3366, -15.8579, -8.7873,
+#     -11.3935,  -9.9674, -14.7851, -10.5096, -10.6762, -11.3624, -14.8511]]), axis=2)
+
 thresholds_vector = tf.expand_dims(tf.constant([[
-    -9.8102,  -13.0183, -14.1928,  25.8687,  30.4193,  25.6352,  25.0205, -15.3203,  30.6154, -14.3594,
-    -11.5712, -10.3334,  20.0784, -16.5769, -10.7310,  15.6762,  27.6900,  29.1826,  21.9059, -11.7631,
-    -11.7591, -10.5255,  32.6864, -10.7251, -12.0509, -13.0080, -12.0201, -14.8350, -15.3849,  16.8090,
-    -12.3643,  34.8795, -12.1392, -13.2892, -12.7744, -16.7355, -11.6496, -12.2563, -6.8718, -11.0011,
-    -7.4486, -12.0740, -9.2410, -11.0125,   35.9105, -10.4298, -10.2161, -18.3366, -15.8579, -8.7873,
-    -11.3935,  -9.9674, -14.7851, -10.5096, -10.6762, -11.3624, -14.8511]]), axis=2)
+    -12.0000,  -12.0000, -12.0000,  25.8687,  30.4193,  25.6352,  25.0205, -15.3203,  30.6154, -12.0000,
+    -12.0000, -12.0000,  20.0784, -12.0000, -12.0000,  15.6762,  27.6900,  29.1826,  21.9059, -12.0000,
+    -12.0000, -12.0000,  32.6864, -12.0000, -12.0000, -12.0000, -12.0000, -12.0000, -12.0000,  16.8090,
+    -12.0000,  34.8795, -12.0000, -12.0000, -12.0000, -12.0000, -12.0000, -12.0000, -12.0000, -12.0000,
+    -12.0000, -12.0000, -12.0000, -12.0000,   35.9105, -12.0000, -12.0000, -12.0000, -12.0000, -12.0000,
+    -12.0000,  -12.0000, -12.0000, -12.0000, -12.0000, -12.0000, -12.0000]]), axis=2)
 
 # # Alpha 0.5 Best Corridors, High-dim Framework, only problamatic cells
 # thresholds_vector = tf.expand_dims(tf.constant([[
@@ -203,6 +211,15 @@ thresholds_vector = tf.expand_dims(tf.constant([[
 #     - 12.0000,   32.0000, - 12.0000, - 12.0000, - 12.0000, - 12.0000, - 12.0000, - 12.0000, - 12.0000, - 12.0000,
 #     - 12.0000, - 12.0000, - 12.0000, - 12.0000,   32.0000, - 12.0000, - 12.0000, - 12.0000, - 12.0000, - 12.0000,
 #     - 12.0000, - 12.0000, - 12.0000, - 12.0000, - 12.0000, - 12.0000, - 12.0000]]), axis=2)
+
+# # Alpha 0.5 Best Corridors, High-dim Framework, Alpha=1, 100Samples, Noisy Iterative BO Config
+# thresholds_vector = tf.expand_dims(tf.constant([[
+#     -12.1667, - 13.3691, - 18.0000,   26.1501,   32.0000,   27.8266,   24.5694, - 14.5654,   32.0000, - 13.9548,
+#     - 10.8122, - 11.2349,   20.8837, - 18.0000, - 11.0949,   15.7942,   29.7828,   25.2739,   25.3110, - 15.4718,
+#     - 14.3984, - 12.7908,   32.0000, - 12.9391, - 10.7055, - 9.5984, - 18.0000, - 10.7880, - 13.5484,   18.8432,
+#     - 14.5677,   32.0000, - 14.0476, - 8.0352, - 9.4126, - 13.5271, - 11.4619, - 11.1426, - 6.8492, - 9.9888,
+#     - 7.6224, - 13.9718, - 10.1444, - 13.9342,   32.0000, - 12.0637, - 16.3331, - 15.2217, - 14.4253, - 10.6167,
+#     - 12.1975, - 9.9580, - 14.9875, - 13.3141, - 14.6836, - 15.5389, - 12.0180]]), axis=2)
 
 Ptx_thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 46.0, 46.0, tf.float32), axis=0),axis=2)
 obj_vector = torch.tensor([[2.50]], dtype=torch.double) #-4.66
@@ -365,9 +382,9 @@ for i in tqdm(range(BO_itertions)):
                "Full_tilts": Full_tilts.numpy()}
     file_name = "2023_08_11_HighDim_BO_LambdaHalf_Mix_Corr_ProductRate_Alpha1_100Samples_NoisyIterativeDataSet_iteration{}.mat".format(i)
     savemat(file_name, data_BO)
-    #
-    # d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
-    #       "SINR_GUEs": 10 * np.log10(sinr_total_GUEs.numpy()),
-    #       "Rate_UAVs": Rate_UAVs.numpy(),
-    #       "Rate_GUEs": Rate_GUEs.numpy()}
-    # savemat("2023_08_08_SINR_Rate_LambdaHaf_ProductRateObj_HighDimBO_Alpha2_4Datasets_100Samples_ProblamaticCells.mat", d)
+
+    d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
+          "SINR_GUEs": 10 * np.log10(sinr_total_GUEs.numpy()),
+          "Rate_UAVs": Rate_UAVs.numpy(),
+          "Rate_GUEs": Rate_GUEs.numpy()}
+    savemat("2023_08_16_SINR_Rate_LambdaHaf_ProductRateObj_IterativeBO_FixedDownTilts.mat", d)

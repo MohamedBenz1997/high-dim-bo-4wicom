@@ -134,6 +134,7 @@ class Config():
 
         # --------- Specialized BO
         self.Specialized_BO = False
+        self.IterativeBO_1Threshold = True
 
 
         return

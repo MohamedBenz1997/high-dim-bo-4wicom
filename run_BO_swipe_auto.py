@@ -54,29 +54,34 @@ def generate_initial_data(idx_1, thresholds_vector, Ptx_thresholds_vector, obj_v
     T_1 = tf.expand_dims(thresholds_vector[:, idx_1, 0], axis=1)
     T_2 = tf.expand_dims(Ptx_thresholds_vector[:, idx_1, 0], axis=1)
     train_x = tf.concat([T_1, T_2], axis=1)
+    if config.IterativeBO_1Threshold == True:
+        train_x = T_1
     train_x = torch.from_numpy(train_x.numpy()).double()
     train_obj = obj_vector
 
-    for j in range(5):
+    for j in range(10):
         BS_tilt = thresholds_vector[0,:,0]
         P_Tx_TN = Ptx_thresholds_vector[0, :, 0]
         indx = tf.constant([[idx_1]])
 
-        rand_values = tf.constant([random.uniform(-25.0, 40.0)])
-        new_train_x = torch.from_numpy( tf.expand_dims(rand_values, axis=0).numpy()).double()
+        rand_values = tf.constant([random.uniform(-20.0, 30.0)])
+        new_train_x1 = torch.from_numpy( tf.expand_dims(rand_values, axis=0).numpy()).double()
         BS_tilt = tf.tensor_scatter_nd_update(BS_tilt, indx, rand_values)
         BS_tilt = tf.expand_dims(tf.expand_dims(BS_tilt,axis=0),axis=2)
-        BS_tilt = thresholds_vector #This is for getting the SINR for the opt thresholds after finishing
+        # BS_tilt = thresholds_vector #This is for getting the SINR for the opt thresholds after finishing
         BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
 
         rand_values1 = tf.constant([random.uniform(40.0, 46.0)])
-        new_train_x1 = torch.from_numpy( tf.expand_dims(rand_values1, axis=0).numpy()).double()
+        new_train_x2 = torch.from_numpy( tf.expand_dims(rand_values1, axis=0).numpy()).double()
         P_Tx_TN = tf.tensor_scatter_nd_update(P_Tx_TN, indx, rand_values1)
         P_Tx_TN = tf.expand_dims(tf.expand_dims(P_Tx_TN,axis=0),axis=2)
         P_Tx_TN = Ptx_thresholds_vector #This is for getting the SINR for the opt thresholds after finishing
         P_Tx_TN = tf.tile(P_Tx_TN, [2 * config.batch_num, 1, config.Nuser_drop])
 
-        new_train_x = torch.cat((new_train_x, new_train_x1), dim=1)
+        new_train_x = torch.cat((new_train_x1, new_train_x2), dim=1)
+        if config.IterativeBO_1Threshold == True:
+            new_train_x = new_train_x1
+
         # Run the simulator
         data = Terrestrial()
         data.alpha_factor = 0.0  # LEO at 90deg
@@ -147,15 +152,23 @@ def optimize_qnehvi_and_get_observation(model, train_x, sampler, idx_1, threshol
     thresholds_vector_ref = thresholds_vector[0, :, 0]
     Ptx_thresholds_vector_ref = Ptx_thresholds_vector[0, :, 0]
     indx = tf.constant([[idx_1]])
-    opt_values = tf.constant([new_x[0][0].__float__()])
-    opt_values1 = tf.constant([new_x[0][1].__float__()])
-    BS_tilt = tf.tensor_scatter_nd_update(thresholds_vector_ref, indx, opt_values)
-    BS_tilt = tf.expand_dims(tf.expand_dims(BS_tilt, axis=0), axis=2)
-    BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
+    if config.IterativeBO_1Threshold == False:
+        opt_values = tf.constant([new_x[0][0].__float__()])
+        opt_values1 = tf.constant([new_x[0][1].__float__()])
+        BS_tilt = tf.tensor_scatter_nd_update(thresholds_vector_ref, indx, opt_values)
+        BS_tilt = tf.expand_dims(tf.expand_dims(BS_tilt, axis=0), axis=2)
+        BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
+        P_Tx_TN = tf.tensor_scatter_nd_update(Ptx_thresholds_vector_ref, indx, opt_values1)
+        P_Tx_TN = tf.expand_dims(tf.expand_dims(P_Tx_TN, axis=0), axis=2)
+        P_Tx_TN = tf.tile(P_Tx_TN, [2 * config.batch_num, 1, config.Nuser_drop])
 
-    P_Tx_TN = tf.tensor_scatter_nd_update(Ptx_thresholds_vector_ref, indx, opt_values1)
-    P_Tx_TN = tf.expand_dims(tf.expand_dims(P_Tx_TN, axis=0), axis=2)
-    P_Tx_TN = tf.tile(P_Tx_TN, [2 * config.batch_num, 1, config.Nuser_drop])
+    if config.IterativeBO_1Threshold == True:
+        opt_values = tf.constant([new_x[0][0].__float__()])
+        BS_tilt = tf.tensor_scatter_nd_update(thresholds_vector_ref, indx, opt_values)
+        BS_tilt = tf.expand_dims(tf.expand_dims(BS_tilt, axis=0), axis=2)
+        BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
+        P_Tx_TN = tf.tile(Ptx_thresholds_vector, [2 * config.batch_num, 1, config.Nuser_drop])
+
 
     #Run the simulator
     data = Terrestrial()
@@ -189,8 +202,8 @@ RAW_SAMPLES = 512
 NOISE_SE = torch.tensor([0.001, 0.001], dtype=torch.double)
 
 #2Thresholds bounds
-bounds_lower = torch.tensor([[-25.0, 40.0]], dtype=torch.double)
-bounds_higher = torch.tensor([[40.0, 46.0]], dtype=torch.double)
+bounds_lower = torch.tensor([[-20.0, 44.0]], dtype=torch.double)
+bounds_higher = torch.tensor([[30.0, 46.0]], dtype=torch.double)
 bounds = torch.cat((bounds_lower, bounds_higher), 0)
 standard_bounds_lower = torch.tensor([[0.0]], dtype=torch.double)
 standard_bounds_lower = standard_bounds_lower.tile((2,))
@@ -198,20 +211,28 @@ standard_bounds_higher = torch.tensor([[1.0]], dtype=torch.double)
 standard_bounds_higher = standard_bounds_higher.tile((2,))
 standard_bounds = torch.cat((standard_bounds_lower, standard_bounds_higher), 0)
 
+if config.IterativeBO_1Threshold == True:
+    bounds_lower = torch.tensor([[-20.0]], dtype=torch.double)
+    bounds_higher = torch.tensor([[30.0]], dtype=torch.double)
+    bounds = torch.cat((bounds_lower, bounds_higher), 0)
+    standard_bounds_lower = torch.tensor([[0.0]], dtype=torch.double)
+    standard_bounds_higher = torch.tensor([[1.0]], dtype=torch.double)
+    standard_bounds = torch.cat((standard_bounds_lower, standard_bounds_higher), 0)
+
 #ref_point for EHVI
-ref_point = torch.tensor([-30.0, -30.0], dtype=torch.double)
+ref_point = torch.tensor([-5.0, -5.0], dtype=torch.double)
 
 BS_id = list(range(114))
 random.shuffle(BS_id)
-for i in tqdm(BS_id): #28 for 1st swipe and odd, 29 for 2nd swipe and even
-    ## For 1st swipe
-    # idx_1 = i
+
+for iteration, i in enumerate(tqdm(BS_id)):
+
     idx_1 = i%57
 
-    #For 1st swipe
+    #For 1st iteration
     if i == BS_id[0]:
-        thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 0.0, tf.float32), axis=0),axis=2)
-        Ptx_thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 46.0, 46.0, tf.float32), axis=0),axis=2)#-20.0
+        thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 0.0, tf.float32), axis=0),axis=2)-12.0
+        Ptx_thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 46.0, 46.0, tf.float32), axis=0),axis=2)
 
         # # Alpha 0.5 Best Corridors
         # thresholds_vector = tf.expand_dims(tf.constant([[
@@ -221,42 +242,17 @@ for i in tqdm(BS_id): #28 for 1st swipe and odd, 29 for 2nd swipe and even
         #     -12.3643,  34.8795, -12.1392, -13.2892, -12.7744, -16.7355, -11.6496, -12.2563, -6.8718, -11.0011,
         #     -7.4486, -12.0740, -9.2410, -11.0125,   35.9105, -10.4298, -10.2161, -18.3366, -15.8579, -8.7873,
         #     -11.3935,  -9.9674, -14.7851, -10.5096, -10.6762, -11.3624, -14.8511]]), axis=2)
-        #
-        # Ptx_thresholds_vector = tf.expand_dims(tf.constant([[
-        #     43.1674,   46.0000,   43.8904,   46.0000,   43.7977,   46.0000,   46.0000,   44.0791,   46.0000,   41.1468,
-        #     46.0000,   43.5996,   46.0000,   43.8231,   45.2302,   46.0000,   46.0000,   46.0000,   46.0000,   46.0000,
-        #     41.6770,   46.0000,   40.6252,   46.0000,   46.0000,   46.0000,   46.0000,   46.0000,   40.1656,   40.6528,
-        #     41.6175,   46.0000,   46.0000,   43.2340,   40.7012,   43.2337,   46.0000,   46.0000,   46.0000,   46.0000,
-        #     46.0000,   46.0000,   46.0000,   46.0000,   46.0000,   42.5479,   46.0000,   42.0289,   44.9817,   46.0000,
-        #     44.0717,   46.0000,   38.7280,   46.0000,   42.6833,   46.0000,   41.6481]]), axis=2)
 
-        # # Alpha 0.5 Best Uni
+        # Alpha 0.5 Best Corridors, random iterating
         # thresholds_vector = tf.expand_dims(tf.constant([[
-        #     20.3564,   22.7905,   18.6374,   21.5696,   25.5883,   15.0371,   24.3659,   23.7872,   19.3083,   23.4252,
-        #     24.9241,   22.2011,   25.9867,   20.9492,   20.8867,   20.0986,   25.5309,   19.6437,   21.2951, -11.4489,
-        #    -15.1663,  -14.6908, -13.1284, -10.9597, -12.8759, -12.3385, -10.7297, -12.7573, -13.2226, -11.6806,
-        #     -10.7940,  -8.7047, -10.8433, -14.6110, -14.4588, -8.1742, -12.4539, -15.0166, -13.6366, -6.9905,
-        #     -11.5671, -8.0656, -8.5365, -9.5670, -11.5345, -13.0674, -13.0720, -6.2198, -12.9904, -13.4856,
-        #     -12.3472, -12.6732, -8.3924, -12.6005, -8.6385, -13.3807, -7.9097]]), axis=2)
-        #
-        # Ptx_thresholds_vector = tf.expand_dims(tf.constant([[
-        #     46.0000,   46.0000,   46.0000,   46.0000,   46.0000,   46.0000,   46.0000,   46.0000,   46.0000,   46.0000,
-        #     46.0000,   46.0000,   46.0000,   46.0000,   46.0000,   43.7100,   46.0000,   46.0000,   44.4779,   44.7952,
-        #     46.0000,   46.0000,   46.0000,   46.0000,   46.0000,   46.0000,   43.2224,   43.1503,   46.0000,   46.0000,
-        #     46.0000,   46.0000,   44.1847,   43.2014,   46.0000,   46.0000,   41.2889,   46.0000,   46.0000,   43.8008,
-        #     45.0965,   46.0000,   46.0000,   46.0000,   46.0000,   46.0000,   45.8050,   46.0000,   46.0000,   46.0000,
-        #     46.0000,   42.0314,   43.8446,   46.0000,   46.0000,   46.0000,   46.0000]]), axis=2)
-
-        # # Alpha 0.5 Best Corridors, random iterating
-        thresholds_vector = tf.expand_dims(tf.constant([[
-            -16.1038, - 13.4602, - 12.3521,   26.9551, - 13.2374,   29.9630, - 11.7704, - 11.2683,   23.4049, - 13.2939,
-            20.2796, - 11.8374,   18.7154, - 11.1245, - 9.9152,   16.5736, - 9.3323,   27.1126,   26.4470, - 13.1050,
-            - 9.8243,   22.4399,   34.6753, - 14.4526, - 13.2783, - 12.2372, - 10.0612, - 13.4906, - 12.2336, - 12.6344,
-            - 12.9772,   35.0441, - 16.1445, - 14.8551, - 9.5613, - 12.6463, - 13.1192, - 12.5733, - 11.2016,   24.1970,
-            - 11.0013, - 12.6641, - 8.3223, - 14.5665, - 15.3501, - 11.9199, - 11.5034, - 12.1394, - 10.4707, - 16.0768,
-            - 12.8765,   25.2399, - 10.6521,   36.5998, - 11.4342, - 10.8184, - 13.6407]]), axis=2)
+        #     -16.1038, - 13.4602, - 12.3521,   26.9551, - 13.2374,   29.9630, - 11.7704, - 11.2683,   23.4049, - 13.2939,
+        #     20.2796, - 11.8374,   18.7154, - 11.1245, - 9.9152,   16.5736, - 9.3323,   27.1126,   26.4470, - 13.1050,
+        #     - 9.8243,   22.4399,   34.6753, - 14.4526, - 13.2783, - 12.2372, - 10.0612, - 13.4906, - 12.2336, - 12.6344,
+        #     - 12.9772,   35.0441, - 16.1445, - 14.8551, - 9.5613, - 12.6463, - 13.1192, - 12.5733, - 11.2016,   24.1970,
+        #     - 11.0013, - 12.6641, - 8.3223, - 14.5665, - 15.3501, - 11.9199, - 11.5034, - 12.1394, - 10.4707, - 16.0768,
+        #     - 12.8765,   25.2399, - 10.6521,   36.5998, - 11.4342, - 10.8184, - 13.6407]]), axis=2)
         
-        obj_vector = torch.tensor([[-4.66, -4.66]], dtype=torch.double)
+        obj_vector = torch.tensor([[-2.0961, -2.0961]], dtype=torch.double)
 
 
     #Obtain the training data-set
@@ -339,7 +335,7 @@ for i in tqdm(BS_id): #28 for 1st swipe and odd, 29 for 2nd swipe and even
                 "best_rate_so_far": best_value_qNEHVI_all.numpy(),
                 "Full_tilts": Full_tilts.numpy(),
                 "Full_powers": Full_powers.numpy()}
-    file_name = "2023_08_09_iterative_BO_LambdaHalf_Mix_Corr_ProductRate_RandomIterationsCell{}_iteration{}.mat".format(idx_1,i)
+    file_name = "2023_08_17_iterative_BO_LambdaHalf_Mix_Corr_ProductRate_SideLobes_RandomIterations_iteration{}_Cell{}.mat".format(iteration,idx_1)
     savemat(file_name, data_BO)
     #############################################################
     # d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
