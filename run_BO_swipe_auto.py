@@ -234,7 +234,7 @@ for iteration, i in enumerate(tqdm(BS_id)):
         thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 0.0, tf.float32), axis=0),axis=2)-12.0
         Ptx_thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 46.0, 46.0, tf.float32), axis=0),axis=2)
 
-        # # Alpha 0.5 Best Corridors
+        # # # Alpha 0.5 Best Corridors
         # thresholds_vector = tf.expand_dims(tf.constant([[
         #     -9.8102,  -13.0183, -14.1928,  25.8687,  30.4193,  25.6352,  25.0205, -15.3203,  30.6154, -14.3594,
         #     -11.5712, -10.3334,  20.0784, -16.5769, -10.7310,  15.6762,  27.6900,  29.1826,  21.9059, -11.7631,

@@ -23,7 +23,7 @@ class Large_Scale_Gain_drone(Config):
         self.SLA_cut = 30  # in dB
         self.Amax_cut = 30  # in dB
         self.phi_3dB = 70  # 3dB HPBW of antenna patter in degree for Azimuth
-        self.thetha_3dB = 65 #10 # 3dB HPBW of antenna patter in degree for Elevation
+        self.thetha_3dB = 10 # 3dB HPBW of antenna patter in degree for Elevation
         self.Antenna_elements = 1
         self.Lambda = self.fc * 1e9 / self.c
         self.Antenna_spacing = self.Lambda * 0.5

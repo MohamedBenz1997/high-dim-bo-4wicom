@@ -13,7 +13,7 @@ class Config():
     def __init__(self):
 
         # ------------ Define the general paramters that will be used in the upcoming functions.
-        self.batch_num = 200 #Number of iterations to run
+        self.batch_num = 2 #Number of iterations to run
         self.beta_open_loop = 1
         self.Zuser = 1.5            #Hight of user in m
         self.Zap = 25.0             #Hight of BSs in m
@@ -28,7 +28,7 @@ class Config():
 
         if self.DeploymentType=="Hex":
             self.Nap = 19                          #Number of BSs without sectoring
-            self.Nuser_drop = 15*3*self.Nap        #Number of UEs dropped
+            self.Nuser_drop = 15*3*self.Nap        #Number of UEs dropped #use 57 if debugging UE is on
         elif self.DeploymentType =="PPP":
             self.Nap = 19                           #Number of BSs without sectoring
             self.Nuser_drop = 15*3*self.Nap         #Number of UEs dropped
@@ -105,7 +105,7 @@ class Config():
         # ------------ UAVs deployment
         self.UAVs = True
         # self.Zuav=150.0        #UAV Height
-        self.GUE_ratio = 0.6667 #Case5: 0.6667, Case4: 0.8, Case3: 0.93334, Case2:0.993334
+        self.GUE_ratio = 0.6667 #Case5: 0.6667, Case4: 0.8, Case3: 0.93334, Case2:0.993334 #Use 1 and 0 in case of UE debugging
         self.UAV_ratio = 0.3333 #Case5: 0.3333, Case4: 0.2, Case3: 0.06666, Case2:0.006666
         self.Zuav = tf.random.uniform([2 * self.batch_num, int(self.UAV_ratio * self.Nuser_drop)+1, 1], 150.0, 150.0) #+1 for case5,3,2
 
@@ -135,6 +135,9 @@ class Config():
         # --------- Specialized BO
         self.Specialized_BO = False
         self.IterativeBO_1Threshold = True
+
+        # --------- UEs debugging
+        self.GUEs_debug = False
 
 
         return
