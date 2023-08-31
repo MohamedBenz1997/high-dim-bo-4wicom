@@ -245,10 +245,10 @@ class DeployHex(Config):
             Xuser_UAVs_Yaxis4 = tf.random.uniform(Xuser_UAVs_Xaxis[:,int((self.UAV_ratio * self.Nuser_drop)*3/4):,:].shape, -780, 780)
             Xuser_UAVs_Yaxis = tf.concat([Xuser_UAVs_Yaxis1, Xuser_UAVs_Yaxis2, Xuser_UAVs_Yaxis3, Xuser_UAVs_Yaxis4], axis=1)
 
-            Xuser_UAVs_Zaxis1 = tf.random.uniform(Xuser_UAVs_Xaxis[:,0:int((self.UAV_ratio * self.Nuser_drop)/4),:].shape, 150.0, 150.0)
-            Xuser_UAVs_Zaxis2 = tf.random.uniform(Xuser_UAVs_Xaxis[:,int((self.UAV_ratio * self.Nuser_drop)/4):int((self.UAV_ratio * self.Nuser_drop)/2),:].shape, 120.0, 120.0)
-            Xuser_UAVs_Zaxis3 = tf.random.uniform(Xuser_UAVs_Xaxis[:,int((self.UAV_ratio * self.Nuser_drop)/2):int((self.UAV_ratio * self.Nuser_drop)*3/4),:].shape, 120.0, 120.0)
-            Xuser_UAVs_Zaxis4 = tf.random.uniform(Xuser_UAVs_Xaxis[:,int((self.UAV_ratio * self.Nuser_drop)*3/4):,:].shape, 150.0, 150.0)
+            Xuser_UAVs_Zaxis1 = tf.random.uniform(Xuser_UAVs_Xaxis[:,0:int((self.UAV_ratio * self.Nuser_drop)/4),:].shape, self.h_corr1, self.h_corr1)
+            Xuser_UAVs_Zaxis2 = tf.random.uniform(Xuser_UAVs_Xaxis[:,int((self.UAV_ratio * self.Nuser_drop)/4):int((self.UAV_ratio * self.Nuser_drop)/2),:].shape, self.h_corr2, self.h_corr2)
+            Xuser_UAVs_Zaxis3 = tf.random.uniform(Xuser_UAVs_Xaxis[:,int((self.UAV_ratio * self.Nuser_drop)/2):int((self.UAV_ratio * self.Nuser_drop)*3/4),:].shape, self.h_corr3, self.h_corr3)
+            Xuser_UAVs_Zaxis4 = tf.random.uniform(Xuser_UAVs_Xaxis[:,int((self.UAV_ratio * self.Nuser_drop)*3/4):,:].shape, self.h_corr4, self.h_corr4)
             Xuser_UAVs_Zaxis = tf.concat([Xuser_UAVs_Zaxis1, Xuser_UAVs_Zaxis2, Xuser_UAVs_Zaxis3, Xuser_UAVs_Zaxis4], axis=1)
 
             Xuser_UAVs = tf.concat([Xuser_UAVs_Xaxis, Xuser_UAVs_Yaxis, Xuser_UAVs_Zaxis], axis=2)

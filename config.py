@@ -126,6 +126,12 @@ class Config():
         self.LSG_all = False
         self.UAVs_highway = True
 
+        # --------- Corridor hights
+        self.h_corr1 = 100.0
+        self.h_corr2 = 100.0
+        self.h_corr3 = 100.0
+        self.h_corr4 = 100.0
+
         # --------- Assigment based on RSS+toe (where toe is going to be optimized by BO for load balancing)
         self.RSS_offloading = False
 

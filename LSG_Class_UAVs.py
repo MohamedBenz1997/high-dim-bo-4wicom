@@ -53,7 +53,7 @@ class Large_Scale_Gain_drone(Config):
 
     # Incorporate sectoring using different aneta gain
     def sectoring(self, Azi_phi_deg, Elv_thetha_deg):
-        # Azi_phi_deg = Azi_phi_deg + 30.0 #This is to make the sectors similar to 3GPP deployment, 30,150,270 deg
+        Azi_phi_deg = Azi_phi_deg + 30.0 #This is to make the sectors similar to 3GPP deployment, 30,150,270 deg
         if Elv_thetha_deg.shape[2] == 0:
             Elv_thetha_deg = tf.tile(Elv_thetha_deg, [1, 3, 1]) + self.BS_tilt[:, :, 0:Elv_thetha_deg.shape[2]]
         else:
