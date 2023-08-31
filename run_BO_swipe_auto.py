@@ -68,7 +68,7 @@ def generate_initial_data(idx_1, thresholds_vector, Ptx_thresholds_vector, obj_v
         new_train_x1 = torch.from_numpy( tf.expand_dims(rand_values, axis=0).numpy()).double()
         BS_tilt = tf.tensor_scatter_nd_update(BS_tilt, indx, rand_values)
         BS_tilt = tf.expand_dims(tf.expand_dims(BS_tilt,axis=0),axis=2)
-        # BS_tilt = thresholds_vector #This is for getting the SINR for the opt thresholds after finishing
+        BS_tilt = thresholds_vector #This is for getting the SINR for the opt thresholds after finishing
         BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
 
         rand_values1 = tf.constant([random.uniform(40.0, 46.0)])
@@ -251,7 +251,8 @@ for iteration, i in enumerate(tqdm(BS_id)):
         #     - 12.9772,   35.0441, - 16.1445, - 14.8551, - 9.5613, - 12.6463, - 13.1192, - 12.5733, - 11.2016,   24.1970,
         #     - 11.0013, - 12.6641, - 8.3223, - 14.5665, - 15.3501, - 11.9199, - 11.5034, - 12.1394, - 10.4707, - 16.0768,
         #     - 12.8765,   25.2399, - 10.6521,   36.5998, - 11.4342, - 10.8184, - 13.6407]]), axis=2)
-        
+
+        #test
         obj_vector = torch.tensor([[-2.0961, -2.0961]], dtype=torch.double)
 
 
@@ -349,11 +350,11 @@ for iteration, i in enumerate(tqdm(BS_id)):
     # # savemat("2023_04_08_SINR_Cell_ID_AlphaHalf_Mix.mat", d)
     # savemat("2023_04_25_Alpha0_GUEs_Cell_ID.mat", d)
 
-    # d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
-    #       "SINR_GUEs": 10 * np.log10(sinr_total_GUEs.numpy()),
-    #       "Rate_UAVs": Rate_UAVs.numpy(),
-    #       "Rate_GUEs": Rate_GUEs.numpy()}
-    # savemat("2023_08_010_SINR_Rate_LambdaHaf_ProductRateObj_IterativeBO_RandomIterations.mat", d)
+    d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
+          "SINR_GUEs": 10 * np.log10(sinr_total_GUEs.numpy()),
+          "Rate_UAVs": Rate_UAVs.numpy(),
+          "Rate_GUEs": Rate_GUEs.numpy()}
+    savemat("2023_08_29_SINR_Rate_LambdaHaf_ProductRateObj_IterativeBO_RandomIterations.mat", d)
     #
     # d = {"Cell_id_GUEs":BSs_id_GUEs.numpy(),
     #       "GUEs_x": Xuser_GUEs_x.numpy(),
