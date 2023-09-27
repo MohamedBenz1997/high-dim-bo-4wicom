@@ -13,7 +13,7 @@ class Config():
     def __init__(self):
 
         # ------------ Define the general paramters that will be used in the upcoming functions.
-        self.batch_num = 200 #Number of iterations to run
+        self.batch_num = 2 #Number of iterations to run
         self.beta_open_loop = 1
         self.Zuser = 1.5            #Hight of user in m
         self.Zap = 25.0             #Hight of BSs in m
@@ -28,6 +28,8 @@ class Config():
 
         if self.DeploymentType=="Hex":
             self.Nap = 19                          #Number of BSs without sectoring
+            if self.N==1:
+                self.Nap = 7
             self.Nuser_drop = 15*3*self.Nap        #Number of UEs dropped #use 57 if debugging UE is on
         elif self.DeploymentType =="PPP":
             self.Nap = 19                           #Number of BSs without sectoring
@@ -105,8 +107,8 @@ class Config():
         # ------------ UAVs deployment
         self.UAVs = True
         # self.Zuav=150.0        #UAV Height
-        self.GUE_ratio = 0.6667 #Case5: 0.6667, Case4: 0.8, Case3: 0.93334, Case2:0.993334 #Use 1 and 0 in case of UE debugging
-        self.UAV_ratio = 0.3333 #Case5: 0.3333, Case4: 0.2, Case3: 0.06666, Case2:0.006666
+        self.GUE_ratio = 0.993334 #Case5: 0.6667, Case4: 0.8, Case3: 0.93334, Case2:0.993334 #Use 1 and 0 in case of UE debugging
+        self.UAV_ratio = 0.006666 #Case5: 0.3333, Case4: 0.2, Case3: 0.06666, Case2:0.006666
         self.Zuav = tf.random.uniform([2 * self.batch_num, int(self.UAV_ratio * self.Nuser_drop)+1, 1], 150.0, 150.0) #+1 for case5,3,2
 
         self.k_dominant_BS=57    #Used for SINR offloading. This is dominant BSs interfernce instead of looking at entire 57 BSs. This value should be desired k with +1
@@ -122,15 +124,15 @@ class Config():
         self.UEs_in_hotspot= 30#*3 #15 this is for no hotspots
 
         # --------- To support 1-tier only evaluations (21-cells [index: 4,5,8,9,10,13,14])
-        self.one_tier = False
+        self.one_tier = False #Do not use this, just change N from 2 to 1
         self.LSG_all = False
         self.UAVs_highway = True
 
         # --------- Corridor hights
-        self.h_corr1 = 100.0
-        self.h_corr2 = 100.0
-        self.h_corr3 = 100.0
-        self.h_corr4 = 100.0
+        self.h_corr1 = 150.0
+        self.h_corr2 = 150.0
+        self.h_corr3 = 150.0
+        self.h_corr4 = 150.0
 
         # --------- Assigment based on RSS+toe (where toe is going to be optimized by BO for load balancing)
         self.RSS_offloading = False

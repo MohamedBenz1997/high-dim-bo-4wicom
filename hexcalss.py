@@ -669,16 +669,16 @@ class DeployHex(Config):
 # #test the class
 # config = Config()
 # ----------- This is where you see the deployed users on the hex grid
-# deployment = DeployHex()
-# deployment.call()
-# deployment.plot_hex()
+#deployment = DeployHex()
+#deployment.call()
+#deployment.plot_hex()
 
 #Wraparound showing
 # Xap,Xuser=deployment.call()
 # D_3d,D_2d,BS_wrapped_Cord=deployment.Dist(Xap,Xuser)
 # deployment.show_wrap_around(Xuser,BS_wrapped_Cord)
 # ------------
-# D_3d,D_2d,BS_wrapped_Cord=deployment.Dist(deployment.Xap,deployment.Xuser)
+#D_3d,D_2d,BS_wrapped_Cord=deployment.Dist(deployment.Xap,deployment.Xuser)
 #
 # deployment.show_wrap_around(deployment.Xuser,BS_wrapped_Cord,savefig=True)
 # # deployment.dist(deployment.Xap,deployment.Xuser,deployment.Wrap_shift)

@@ -55,7 +55,7 @@ def generate_initial_data(thresholds_vector, Ptx_thresholds_vector, obj_vector, 
     for j in range(data_size):
         if config.Specialized_BO == False:
             ##Setting Random tilts for all BSs creating a data set
-            # BS_tilt = tf.random.uniform(thresholds_vector.shape, -18, 32)
+            #BS_tilt = tf.random.uniform(thresholds_vector.shape, -18, 32)
             ########################################################
             ##Different sets of samples in the initial data-set
             ########################################################
@@ -174,15 +174,15 @@ def generate_initial_data(thresholds_vector, Ptx_thresholds_vector, obj_vector, 
         train_obj = torch.cat((train_obj, new_obj), dim=0)
 
     # Save the torch tensors to a file with .pt extension to be loaded using python later
-    file_name = "2023_09_01_Mix_Corr_ProductRate_100m_DataSet.pt"
-    torch.save({"train_x": train_x, "train_obj": train_obj}, file_name)
+    #file_name = "2023_09_01_Mix_Corr_ProductRate_100m_DataSet.pt"
+    #torch.save({"train_x": train_x, "train_obj": train_obj}, file_name)
 
     return train_x, train_obj
 
 # Run BO loop
 ########################################################
-BO_itertions = 200
-data_size = 100
+BO_itertions = 5
+data_size = 5
 
 #Initial tilts and powers and obj value
 thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 0.0, tf.float32), axis=0),axis=2)

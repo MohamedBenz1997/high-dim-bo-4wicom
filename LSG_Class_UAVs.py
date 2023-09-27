@@ -59,21 +59,31 @@ class Large_Scale_Gain_drone(Config):
         else:
             Elv_thetha_deg=tf.tile(Elv_thetha_deg, [1, 3, 1])+self.BS_tilt[:,:,0:Elv_thetha_deg.shape[2]] #This is to consider the tilt for every sector seperately
 
-        G_secor0 = self.Antenna_gain_3GPP(Azi_phi_deg, Elv_thetha_deg[:,0:19,:])
+        if self.N==1:
+            G_secor0 = self.Antenna_gain_3GPP(Azi_phi_deg, Elv_thetha_deg[:, 0:7, :])
+        elif self.N==2:
+            G_secor0 = self.Antenna_gain_3GPP(Azi_phi_deg, Elv_thetha_deg[:,0:19,:])
 
         # Azi_phi_deg1= (tf.cast((Azi_phi_deg+120)<180,"float32")*tf.cast((Azi_phi_deg+120)>-180,"float32")*(Azi_phi_deg+120) +
         #              tf.cast((Azi_phi_deg + 120) < -180, "float32") * (Azi_phi_deg + 120 + 360) +
         #              tf.cast((Azi_phi_deg + 120) > 180, "float32") * (Azi_phi_deg + 120 - 360))
         Azi_phi_deg1 = (tf.cast((Azi_phi_deg + 120) > 180, "float32") * (Azi_phi_deg + 120 - 360) +
                         tf.cast((Azi_phi_deg + 120) < 180.001, "float32") * (Azi_phi_deg + 120))
-        G_secor1 = self.Antenna_gain_3GPP(Azi_phi_deg1, Elv_thetha_deg[:,19:38,:])
 
+        if self.N==1:
+            G_secor1 = self.Antenna_gain_3GPP(Azi_phi_deg1, Elv_thetha_deg[:, 7:14, :])
+        elif self.N==2:
+            G_secor1 = self.Antenna_gain_3GPP(Azi_phi_deg1, Elv_thetha_deg[:,19:38,:])
         # Azi_phi_deg2 = (tf.cast((Azi_phi_deg+240)<180,"float32")*tf.cast((Azi_phi_deg+240)>-180,"float32")*(Azi_phi_deg+240) +
         #              tf.cast((Azi_phi_deg + 240) < -180, "float32") * (Azi_phi_deg + 240 + 360) +
         #              tf.cast((Azi_phi_deg + 240) > 180, "float32") * (Azi_phi_deg + 240 - 360))
         Azi_phi_deg2 = (tf.cast((Azi_phi_deg + 240) > 180, "float32") * (Azi_phi_deg + 240.0 - 360.0) +
                         tf.cast((Azi_phi_deg + 240.0) < 180.001, "float32") * (Azi_phi_deg + 240))
-        G_secor2 = self.Antenna_gain_3GPP(Azi_phi_deg2, Elv_thetha_deg[:,38:,:])
+
+        if self.N==1:
+            G_secor2 = self.Antenna_gain_3GPP(Azi_phi_deg2, Elv_thetha_deg[:, 14:, :])
+        elif self.N==2:
+            G_secor2 = self.Antenna_gain_3GPP(Azi_phi_deg2, Elv_thetha_deg[:,38:,:])
 
         G_sector = tf.concat([G_secor0, G_secor1, G_secor2], axis=1)
         self.Azi_phi_sector = tf.concat([Azi_phi_deg, Azi_phi_deg1, Azi_phi_deg2], axis=1)

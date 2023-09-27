@@ -101,8 +101,8 @@ def generate_initial_data(thresholds_vector, Ptx_thresholds_vector, obj_vector, 
 
 # Run BO loop
 ########################################################
-BO_itertions = 400
-data_size = 400
+BO_itertions = 3
+data_size = 3
 
 #Initial tilts and powers and obj value
 thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 0.0, tf.float32), axis=0),axis=2)

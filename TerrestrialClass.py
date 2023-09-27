@@ -45,20 +45,20 @@ class Terrestrial(Config):
                         D_2d = tf.concat([D_2d, D_2d_in, D_2d_UAV], axis=2)
                         Azi_phi_deg = tf.concat([Azi_phi_deg, Azi_phi_deg_in, Azi_phi_deg_UAV], axis=2)
                         Elv_thetha_deg = tf.concat([Elv_thetha_deg, Elv_thetha_deg_in, Elv_thetha_deg_UAV], axis=2)
-
+                """
                 if self.one_tier == True:
                     if self.indoor == False:
-                        LSL_1, LSG_1, G_Antenna_1, p_LOS_1, pl_1, shadowing_LOS_1, shadowing_NLOS_1 = self.Large_Scale_Gain_drone.call(D[:,0:7,0:int(self.GUE_ratio*self.Nuser_drop)], D_2d[:,0:7,0:int(self.GUE_ratio*self.Nuser_drop)], Azi_phi_deg[:,0:7,0:int(self.GUE_ratio*self.Nuser_drop)], Elv_thetha_deg[:,0:7,0:int(self.GUE_ratio*self.Nuser_drop)], self.Zuser) #GUEs
-                        LSL_2, LSG_2, G_Antenna_2, p_LOS_2, pl_2, shadowing_LOS_2, shadowing_NLOS_2 = self.Large_Scale_Gain_drone.call(D[:, 0:7, int(self.GUE_ratio * self.Nuser_drop):],D_2d[:, 0:7, int(self.GUE_ratio * self.Nuser_drop):],Azi_phi_deg[:, 0:7, int(self.GUE_ratio * self.Nuser_drop):],Elv_thetha_deg[:, 0:7, int(self.GUE_ratio * self.Nuser_drop):], self.Zuav) #UAVs
+                        LSL_1, LSG_1, G_Antenna_1, p_LOS_1, pl_1, shadowing_LOS_1, shadowing_NLOS_1 = self.Large_Scale_Gain_drone.call(D[:,0:7,0:int(self.GUE_ratio*self.Nuser_drop)], D_2d[:,0:7,0:int(self.GUE_ratio*self.Nuser_drop)], Azi_phi_deg[:,0:7,0:int(self.GUE_ratio*self.Nuser_drop)], Elv_thetha_deg[:,0:7,0:int(self.GUE_ratio*self.Nuser_drop)], self.Zuser, self.BS_tilt) #GUEs
+                        LSL_2, LSG_2, G_Antenna_2, p_LOS_2, pl_2, shadowing_LOS_2, shadowing_NLOS_2 = self.Large_Scale_Gain_drone.call(D[:, 0:7, int(self.GUE_ratio * self.Nuser_drop):],D_2d[:, 0:7, int(self.GUE_ratio * self.Nuser_drop):],Azi_phi_deg[:, 0:7, int(self.GUE_ratio * self.Nuser_drop):],Elv_thetha_deg[:, 0:7, int(self.GUE_ratio * self.Nuser_drop):], self.Zuav ,self.BS_tilt) #UAVs
                     if self.indoor == True:
-                        LSL_1, LSG_1, G_Antenna_1, p_LOS_1, pl_1, shadowing_LOS_1, shadowing_NLOS_1 = self.LSGclass.call(D[:, 0:7, :],D_2d[:, 0:7, :],D_in[:, 0:7, :], D_2d_in[:, 0:7, :],D_2d_building[:, 0:7, :],Azi_phi_deg[:,0:7, :],Elv_thetha_deg[:,0:7, :],Azi_phi_deg_in[:, 0:7, :],Elv_thetha_deg_in[:, 0:7, :],Zuser_indoor[:, 0:7, :])
-                        LSL_2, LSG_2, G_Antenna_2, p_LOS_2, pl_2, shadowing_LOS_2, shadowing_NLOS_2 = self.Large_Scale_Gain_drone.call(D_UAV[:, 0:7, :],D_2d_UAV[:, 0:7, :],Azi_phi_deg_UAV[:, 0:7, :],Elv_thetha_deg_UAV[:, 0:7, :], self.Zuav)
+                        LSL_1, LSG_1, G_Antenna_1, p_LOS_1, pl_1, shadowing_LOS_1, shadowing_NLOS_1 = self.LSGclass.call(D[:, 0:7, :],D_2d[:, 0:7, :],D_in[:, 0:7, :], D_2d_in[:, 0:7, :],D_2d_building[:, 0:7, :],Azi_phi_deg[:,0:7, :],Elv_thetha_deg[:,0:7, :],Azi_phi_deg_in[:, 0:7, :],Elv_thetha_deg_in[:, 0:7, :],Zuser_indoor[:, 0:7, :], self.BS_tilt)
+                        LSL_2, LSG_2, G_Antenna_2, p_LOS_2, pl_2, shadowing_LOS_2, shadowing_NLOS_2 = self.Large_Scale_Gain_drone.call(D_UAV[:, 0:7, :],D_2d_UAV[:, 0:7, :],Azi_phi_deg_UAV[:, 0:7, :],Elv_thetha_deg_UAV[:, 0:7, :], self.Zuav, self.BS_tilt)
                         #Need to connect them for assigment phase later
                         D = tf.concat([D, D_in,D_UAV], axis=2)
                         D_2d = tf.concat([D_2d, D_2d_in, D_2d_UAV], axis=2)
                         Azi_phi_deg = tf.concat([Azi_phi_deg, Azi_phi_deg_in, Azi_phi_deg_UAV], axis=2)
                         Elv_thetha_deg = tf.concat([Elv_thetha_deg, Elv_thetha_deg_in, Elv_thetha_deg_UAV], axis=2)
-
+                """
                 LSL = tf.concat([LSL_1, LSL_2], axis=2)
                 LSG = tf.concat([LSG_1, LSG_2], axis=2)
                 G_Antenna = tf.concat([G_Antenna_1, G_Antenna_2], axis=2)
@@ -69,9 +69,14 @@ class Terrestrial(Config):
 
             # from UEs  to sat (all beams)
             if self.one_tier == False:
-                D_2d_Sat = tf.expand_dims(D_2d[:, 19, :], axis=1) #19 is the center sat for 2-tier network, you can change its coordinates from Deployment class
-                Azi_phi_deg_Sat = tf.expand_dims(Azi_phi_deg[:, 19, :], axis=1)
-                Elv_thetha_deg_Sat = tf.expand_dims(Elv_thetha_deg[:, 19, :], axis=1)
+                if self.N==1:
+                    D_2d_Sat = tf.expand_dims(D_2d[:, 3, :],axis=1)  # 3 is the center sat for 1-tier, you can change its coordinates from Deployment class
+                    Azi_phi_deg_Sat = tf.expand_dims(Azi_phi_deg[:, 3, :], axis=1)
+                    Elv_thetha_deg_Sat = tf.expand_dims(Elv_thetha_deg[:, 3, :], axis=1)
+                elif self.N==2:
+                    D_2d_Sat = tf.expand_dims(D_2d[:, 19, :],axis=1)  # 19 is the center sat for 2-tier network, you can change its coordinates from Deployment class
+                    Azi_phi_deg_Sat = tf.expand_dims(Azi_phi_deg[:, 19, :], axis=1)
+                    Elv_thetha_deg_Sat = tf.expand_dims(Elv_thetha_deg[:, 19, :], axis=1)
 
             if self.one_tier == True:
                 D_2d_Sat = tf.expand_dims(D_2d[:, 3, :], axis=1) #3 is the center sat for 1-tier, you can change its coordinates from Deployment class

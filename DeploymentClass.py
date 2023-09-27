@@ -99,7 +99,10 @@ class Deployment(Config):
                     Azi_phi_deg, Elv_thetha_deg = self.Azi_Elv_Angles(BS_wrapped_Cord,Xuser,D_2d)
 
             if self.open_access:
-                Xap = tf.concat([Xap, tf.tile(tf.constant([[[self.LEO_x_cord, self.LEO_y_cord, self.Zleo],[0.0, -43301.27018922193, self.Zleo],[0.0, 43301.27018922193, self.Zleo],[-37500.0, -21650.635094610963, self.Zleo],[-37500.0, 21650.635094610963, self.Zleo],[37500.0, -21650.635094610963, self.Zleo],[37500.0, 21650.635094610963, self.Zleo]]]),[Xap.shape[0], 1, 1])], axis=1)
+                if self.N==1:
+                    Xap = Xap
+                elif self.N == 2:
+                    Xap = tf.concat([Xap, tf.tile(tf.constant([[[self.LEO_x_cord, self.LEO_y_cord, self.Zleo],[0.0, -43301.27018922193, self.Zleo],[0.0, 43301.27018922193, self.Zleo],[-37500.0, -21650.635094610963, self.Zleo],[-37500.0, 21650.635094610963, self.Zleo],[37500.0, -21650.635094610963, self.Zleo],[37500.0, 21650.635094610963, self.Zleo]]]),[Xap.shape[0], 1, 1])], axis=1)
 
                 # Nuser_drop_GUE = int(self.GUE_ratio * self.Nuser_drop)
                 # Nuser_drop_UAV = int(self.UAV_ratio * self.Nuser_drop)

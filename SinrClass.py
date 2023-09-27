@@ -26,8 +26,10 @@ class SINR(Config):
 
     # ------------ DL SINR
     def sinr_TN(self, LSG, P_Tx_TN):
-
-        P_Tx_TN = tf.slice(P_Tx_TN, [0, 0, 0], [tf.shape(LSG)[0], 57, tf.shape(LSG)[-1]])
+        if self.N==1:
+            P_Tx_TN = tf.slice(P_Tx_TN, [0, 0, 0], [tf.shape(LSG)[0], 21, tf.shape(LSG)[-1]])
+        elif self.N==2:
+            P_Tx_TN = tf.slice(P_Tx_TN, [0, 0, 0], [tf.shape(LSG)[0], 57, tf.shape(LSG)[-1]])
         P_Tx_TN = tf.math.pow(10.0, (P_Tx_TN - 30.0) / 10.0)  # Conver to linear
         LSL_TN=-LSG
         LSL_min_TN = tf.math.reduce_min(LSL_TN, axis=1, keepdims=True)
@@ -35,7 +37,10 @@ class SINR(Config):
 
         #Finding the BSs ids of served UAVs
         indexing = tf.cast(-LSG == LSL_min_TN, "float32")
-        BSs_id = tf.expand_dims(tf.expand_dims(tf.range(0, 57, dtype=tf.float32), 0), 2) * indexing
+        if self.N==1:
+            BSs_id = tf.expand_dims(tf.expand_dims(tf.range(0, 21, dtype=tf.float32), 0), 2) * indexing
+        elif self.N==2:
+            BSs_id = tf.expand_dims(tf.expand_dims(tf.range(0, 57, dtype=tf.float32), 0), 2) * indexing
         BSs_id = tf.reduce_sum(BSs_id, axis=1)
 
         LSG_min_TN = tf.math.pow(10, (-LSL_min_TN) / 10)
@@ -599,7 +604,10 @@ class SINR(Config):
     def BO_Obj_Rates_and_Outage(self, LSG, LSG_UAVs_Corridors,  P_Tx_TN, alpha):
 
         #This is for GUEs
-        P_Tx_TN_GUEs = tf.slice(P_Tx_TN, [0, 0, 0], [tf.shape(LSG)[0], 57, tf.shape(LSG)[-1]])
+        if self.N==1:
+            P_Tx_TN_GUEs = tf.slice(P_Tx_TN, [0, 0, 0], [tf.shape(LSG)[0], 21, tf.shape(LSG)[-1]])
+        elif self.N==2:
+            P_Tx_TN_GUEs = tf.slice(P_Tx_TN, [0, 0, 0], [tf.shape(LSG)[0], 57, tf.shape(LSG)[-1]])
         P_Tx_TN_GUEs = tf.math.pow(10.0, (P_Tx_TN_GUEs - 30.0) / 10.0)  # Conver to linear
         LSL_TN_GUEs = -LSG
         LSL_min_TN_GUEs = tf.math.reduce_min(LSL_TN_GUEs, axis=1, keepdims=True)
@@ -608,8 +616,12 @@ class SINR(Config):
         indexing_GUEs = tf.cast(-LSG == LSL_min_TN_GUEs, "float32")
 
         #This is to make sure that if user has same LSG to all 3 sectors, we choose one of the sectors randomly
-        mask1 = tf.random.uniform(indexing_GUEs.shape, 1, 57)*indexing_GUEs
-        random_selection1 = tf.tile(tf.expand_dims(tf.reduce_max(mask1, axis=1),axis=1) , [1,57,1])
+        if self.N==1:
+            mask1 = tf.random.uniform(indexing_GUEs.shape, 1, 21) * indexing_GUEs
+            random_selection1 = tf.tile(tf.expand_dims(tf.reduce_max(mask1, axis=1), axis=1), [1, 21, 1])
+        elif self.N==2:
+            mask1 = tf.random.uniform(indexing_GUEs.shape, 1, 57)*indexing_GUEs
+            random_selection1 = tf.tile(tf.expand_dims(tf.reduce_max(mask1, axis=1),axis=1) , [1,57,1])
         indexing_GUEs = tf.cast(random_selection1 == mask1, "float32")
 
         BS_load_GUEs =tf.tile(tf.expand_dims(tf.reduce_sum(indexing_GUEs, axis=2),axis=2), [1, 1, tf.round(self.GUE_ratio*self.Nuser_drop)])
@@ -619,7 +631,10 @@ class SINR(Config):
         LSG_linear_GUEs = tf.math.pow(10, (LSG) / 10)
 
         snr_link_GUEs = LSG_linear_GUEs * P_Tx_TN_GUEs / (self.BW_TN * self.NF_TN)
-        P_Tx_TN_assigned_GUEs = tf.expand_dims(tf.reduce_max(tf.abs(P_Tx_TN_GUEs * tf.cast(LSG_linear_GUEs == tf.tile(LSG_min_TN_GUEs, [1, 57, 1]), "float32")), axis=1), axis=1)
+        if self.N==1:
+            P_Tx_TN_assigned_GUEs = tf.expand_dims(tf.reduce_max(tf.abs(P_Tx_TN_GUEs * tf.cast(LSG_linear_GUEs == tf.tile(LSG_min_TN_GUEs, [1, 21, 1]), "float32")),axis=1), axis=1)
+        elif self.N==2:
+            P_Tx_TN_assigned_GUEs = tf.expand_dims(tf.reduce_max(tf.abs(P_Tx_TN_GUEs * tf.cast(LSG_linear_GUEs == tf.tile(LSG_min_TN_GUEs, [1, 57, 1]), "float32")), axis=1), axis=1)
         num_TN_GUEs = LSG_min_TN_GUEs * P_Tx_TN_assigned_GUEs / (self.BW_TN * self.NF_TN)
         denom_TN_GUEs = tf.expand_dims(tf.reduce_sum(snr_link_GUEs, axis=1), axis=1) - num_TN_GUEs + self.PSD
         sinr_TN_GUEs = num_TN_GUEs / denom_TN_GUEs
@@ -628,7 +643,10 @@ class SINR(Config):
         sinr_TN_GUEs = tf.cast(sinr_TN_GUEs > 0.003, "float32") * sinr_TN_GUEs + tf.cast(sinr_TN_GUEs <= 0.003,"float32") * 0.003
 
         # This is for UAVs
-        P_Tx_TN_UAVs = tf.slice(P_Tx_TN, [0, 0, 0], [tf.shape(LSG_UAVs_Corridors)[0], 57, tf.shape(LSG_UAVs_Corridors)[-1]])
+        if self.N==1:
+            P_Tx_TN_UAVs = tf.slice(P_Tx_TN, [0, 0, 0],[tf.shape(LSG_UAVs_Corridors)[0], 21, tf.shape(LSG_UAVs_Corridors)[-1]])
+        elif self.N==2:
+            P_Tx_TN_UAVs = tf.slice(P_Tx_TN, [0, 0, 0], [tf.shape(LSG_UAVs_Corridors)[0], 57, tf.shape(LSG_UAVs_Corridors)[-1]])
         P_Tx_TN_UAVs = tf.math.pow(10.0, (P_Tx_TN_UAVs - 30.0) / 10.0)
         LSL_TN_UAVs = -LSG_UAVs_Corridors
         LSL_min_TN_UAVs = tf.math.reduce_min(LSL_TN_UAVs, axis=1, keepdims=True)
@@ -637,8 +655,12 @@ class SINR(Config):
         indexing_UAVs = tf.cast(-LSG_UAVs_Corridors == LSL_min_TN_UAVs, "float32")
 
         # This is to make sure that if user has same LSG to all 3 sectors, we choose one of the sectors randomly
-        mask = tf.random.uniform(indexing_UAVs.shape, 1, 57)*indexing_UAVs
-        random_selection = tf.tile(tf.expand_dims(tf.reduce_max(mask, axis=1),axis=1) , [1,57,1])
+        if self.N == 1:
+            mask = tf.random.uniform(indexing_UAVs.shape, 1, 21) * indexing_UAVs
+            random_selection = tf.tile(tf.expand_dims(tf.reduce_max(mask, axis=1), axis=1), [1, 21, 1])
+        elif self.N == 2:
+            mask = tf.random.uniform(indexing_UAVs.shape, 1, 57)*indexing_UAVs
+            random_selection = tf.tile(tf.expand_dims(tf.reduce_max(mask, axis=1),axis=1) , [1,57,1])
         indexing_UAVs = tf.cast(random_selection == mask, "float32")
         BS_load_UAVs =tf.tile(tf.expand_dims(tf.reduce_sum(indexing_UAVs, axis=2),axis=2), [1, 1, tf.round(self.UAV_ratio*self.Nuser_drop)])
 
@@ -649,7 +671,10 @@ class SINR(Config):
         LSG_linear_UAVs = tf.math.pow(10, (LSG_UAVs_Corridors) / 10)
 
         snr_link_UAVs = LSG_linear_UAVs * P_Tx_TN_UAVs / (self.BW_TN * self.NF_TN)
-        P_Tx_TN_assigned_UAVs = tf.expand_dims(tf.reduce_max(tf.abs(P_Tx_TN_UAVs * tf.cast(LSG_linear_UAVs == tf.tile(LSG_min_TN_UAVs, [1, 57, 1]), "float32")), axis=1), axis=1)
+        if self.N==1:
+            P_Tx_TN_assigned_UAVs = tf.expand_dims(tf.reduce_max(tf.abs(P_Tx_TN_UAVs * tf.cast(LSG_linear_UAVs == tf.tile(LSG_min_TN_UAVs, [1, 21, 1]), "float32")),axis=1), axis=1)
+        elif self.N==2:
+            P_Tx_TN_assigned_UAVs = tf.expand_dims(tf.reduce_max(tf.abs(P_Tx_TN_UAVs * tf.cast(LSG_linear_UAVs == tf.tile(LSG_min_TN_UAVs, [1, 57, 1]), "float32")), axis=1), axis=1)
         num_TN_UAVs = LSG_min_TN_UAVs * P_Tx_TN_assigned_UAVs / (self.BW_TN * self.NF_TN)
         denom_TN_UAVs = tf.expand_dims(tf.reduce_sum(snr_link_UAVs, axis=1), axis=1) - num_TN_UAVs + self.PSD
         sinr_TN_UAVs = num_TN_UAVs / denom_TN_UAVs
@@ -661,8 +686,15 @@ class SINR(Config):
         BS_load_combined = tf.expand_dims(BS_load_GUEs[:,:,0]+BS_load_UAVs[:,:,0],axis=2)
         BS_load_GUEs = tf.tile(BS_load_combined,[1, 1, tf.round(self.GUE_ratio * self.Nuser_drop)])
         BS_load_UAVs = tf.tile(BS_load_combined, [1, 1, tf.round(self.UAV_ratio*self.Nuser_drop)])
-        BS_load_assigned_GUEs = tf.expand_dims(tf.reduce_max(tf.abs(BS_load_GUEs * tf.cast(LSG_linear_GUEs == tf.tile(LSG_min_TN_GUEs, [1, 57, 1]), "float32")), axis=1),axis=1)
-        BS_load_assigned_UAVs = tf.expand_dims(tf.reduce_max(tf.abs(BS_load_UAVs * tf.cast(LSG_linear_UAVs == tf.tile(LSG_min_TN_UAVs, [1, 57, 1]), "float32")), axis=1),axis=1)
+        if self.N==1:
+            BS_load_GUEs = tf.tile(BS_load_combined,[1, 1, LSG_linear_GUEs.shape[2]])
+            BS_load_UAVs = tf.tile(BS_load_combined, [1, 1, LSG_linear_UAVs.shape[2]])
+        if self.N==1:
+            BS_load_assigned_GUEs = tf.expand_dims(tf.reduce_max(tf.abs(BS_load_GUEs * tf.cast(LSG_linear_GUEs == tf.tile(LSG_min_TN_GUEs, [1, 21, 1]), "float32")),axis=1), axis=1)
+            BS_load_assigned_UAVs = tf.expand_dims(tf.reduce_max(tf.abs(BS_load_UAVs * tf.cast(LSG_linear_UAVs == tf.tile(LSG_min_TN_UAVs, [1, 21, 1]), "float32")),axis=1), axis=1)
+        elif self.N==2:
+            BS_load_assigned_GUEs = tf.expand_dims(tf.reduce_max(tf.abs(BS_load_GUEs * tf.cast(LSG_linear_GUEs == tf.tile(LSG_min_TN_GUEs, [1, 57, 1]), "float32")), axis=1),axis=1)
+            BS_load_assigned_UAVs = tf.expand_dims(tf.reduce_max(tf.abs(BS_load_UAVs * tf.cast(LSG_linear_UAVs == tf.tile(LSG_min_TN_UAVs, [1, 57, 1]), "float32")), axis=1),axis=1)
 
         #Rate Calculations and Obj GUEs
         Rate_GUEs = ((1.0 / BS_load_assigned_GUEs) * self.BW_TN * (tf.math.log(1 + sinr_TN_GUEs) / tf.math.log(2.0)))/1e6
@@ -687,12 +719,13 @@ class SINR(Config):
         Rate_sumOftheLog_Obj1 = (alpha) * (Rate_sumOftheLog_Obj_UAVs) + (1 - alpha) * (Rate_sumOftheLog_Obj_GUEs)
 
         #Outage term calculations (Jeffrey's paper)
-        GUEs_Outage = tf.tile(tf.cast(sinr_TN_GUEs < 0.31622776, "float32"), [1, 57, 1])*indexing_GUEs
-        UAVs_Outage = tf.tile(tf.cast(sinr_TN_UAVs < 0.31622776, "float32"), [1, 57, 1]) * indexing_UAVs
-        Users_Outage_perBS = tf.reduce_sum(GUEs_Outage, axis=2)  + tf.reduce_sum(UAVs_Outage, axis=2)
-        Outage_ratio = Users_Outage_perBS/(BS_load_combined[:,:,0]+1)
-        Outage_ratio = tf.reduce_sum(tf.reduce_mean(Outage_ratio, axis=0),axis=0)
-        Avg_Users_Outage_perBS = tf.math.ceil(tf.reduce_mean(Users_Outage_perBS,axis=0))
+        #GUEs_Outage = tf.tile(tf.cast(sinr_TN_GUEs < 0.31622776, "float32"), [1, 57, 1])*indexing_GUEs
+        #UAVs_Outage = tf.tile(tf.cast(sinr_TN_UAVs < 0.31622776, "float32"), [1, 57, 1]) * indexing_UAVs
+        #Users_Outage_perBS = tf.reduce_sum(GUEs_Outage, axis=2)  + tf.reduce_sum(UAVs_Outage, axis=2)
+        #Outage_ratio = Users_Outage_perBS/(BS_load_combined[:,:,0]+1)
+        #Outage_ratio = tf.reduce_sum(tf.reduce_mean(Outage_ratio, axis=0),axis=0)
+        #Avg_Users_Outage_perBS = tf.math.ceil(tf.reduce_mean(Users_Outage_perBS,axis=0))
+        Outage_ratio = 0.0
 
         #Final Obj of sum log rates
         Rate_sumOftheLog_Obj = Rate_sumOftheLog_Obj1 - 0*Outage_ratio
