@@ -51,7 +51,7 @@ plot = Plot()
 ""
 def generate_initial_data(thresholds_vector, Ptx_thresholds_vector, obj_vector):
 
-    for j in range(2):
+    for j in range(100):
         train_x = thresholds_vector
         train_x = torch.from_numpy(train_x.numpy()).double()
         train_obj = obj_vector
@@ -59,7 +59,7 @@ def generate_initial_data(thresholds_vector, Ptx_thresholds_vector, obj_vector):
 
         new_train_x1 = tf.random.uniform(thresholds_vector.shape, -25.0, 0.0, tf.float32)
         BS_tilt = new_train_x1
-        #BS_tilt = thresholds_vector #This is for getting the SINR for the opt thresholds after finishing
+        BS_tilt = thresholds_vector #This is for getting the SINR for the opt thresholds after finishing
         BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
 
         new_train_x2 = tf.random.uniform(Ptx_thresholds_vector.shape, 40.0, 46.0, tf.float32)
@@ -187,7 +187,7 @@ def optimize_qnehvi_and_get_observation(model, train_x, sampler, thresholds_vect
 #############################################################
 
 # BO initial variables
-N_BATCH = 3
+N_BATCH = 200
 MC_SAMPLES = 128
 BATCH_SIZE = 1
 NUM_RESTARTS = 10
@@ -206,7 +206,7 @@ standard_bounds = torch.cat((standard_bounds_lower, standard_bounds_higher), 0)
 
 #1Thresholds bounds
 if config.IterativeBO_1Threshold == True:
-    bounds_lower = torch.tensor([[-20.0]], dtype=torch.double)
+    bounds_lower = torch.tensor([[-25.0]], dtype=torch.double)
     bounds_higher = torch.tensor([[0.0]], dtype=torch.double)
     #this is when opt all tilts together
     bounds_lower = bounds_lower.tile((21,))
@@ -222,7 +222,7 @@ if config.IterativeBO_1Threshold == True:
 ref_point = torch.tensor([-1.0, -1.0], dtype=torch.double)
 
 #Initial config
-thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((21,), 0.0, 0.0, tf.float32), axis=0),axis=2)
+thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((21,), 0.0, 0.0, tf.float32), axis=0),axis=2)-12.0
 Ptx_thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((21,), 46.0, 46.0, tf.float32), axis=0),axis=2)
 obj_vector = torch.tensor([[-0.2529, -0.2529]], dtype=torch.double)
 
@@ -241,7 +241,7 @@ volume = bd.compute_hypervolume().item()
 hvs_qnehvi.append(volume)
 
 # The BO loop
-for k in range(N_BATCH):
+for k in tqdm(range(N_BATCH)):
         # fit the models
         fit_gpytorch_model(mll_qnehvi)
         # define the qEI and qNEI acquisition modules using a QMC sampler
@@ -282,27 +282,24 @@ for k in range(N_BATCH):
         optimum_thresholds = tf.tile(tf.expand_dims(tf.cast(Obj[:,0] == best_observed_objective_value[0], "float64"),axis=1), [1, 21]) * Thresholds
         optimum_thresholds = tf.reduce_sum(optimum_thresholds, axis=0)
 
-#Update the threshold vector and obj vector with BO optimum value
-thresholds_vector_ref = thresholds_vector[0, :, 0]
-Ptx_thresholds_vector_ref = Ptx_thresholds_vector[0, :, 0]
-# opt_values = tf.constant([optimum_thresholds[0].__float__(), optimum_thresholds[1].__float__()])
-opt_values = optimum_thresholds
-thresholds_vector = tf.expand_dims(tf.expand_dims(opt_values, axis=0), axis=2)
+        #Update the threshold vector and obj vector with BO optimum value
+        thresholds_vector_ref = thresholds_vector[0, :, 0]
+        Ptx_thresholds_vector_ref = Ptx_thresholds_vector[0, :, 0]
+        opt_values = optimum_thresholds
+        thresholds_vector = tf.expand_dims(tf.expand_dims(opt_values, axis=0), axis=2)
 
-obj_vector = torch.from_numpy(tf.expand_dims(best_observed_objective_value, axis=0).numpy())
-Full_tilts = thresholds_vector[:,:,0]
+        obj_vector = torch.from_numpy(tf.expand_dims(best_observed_objective_value, axis=0).numpy())
+        Full_tilts = thresholds_vector[:,:,0]
 
-
-# Saving BO for matlab
-data_BO = {"Thresholds": Thresholds.numpy(),
-                "Obj": Obj.numpy(),
-                "best_observed_objective_value": best_observed_objective_value.numpy(),
-                "optimum_thresholds": optimum_thresholds.numpy(),
-                "best_rate_so_far": best_value_qNEHVI_all.numpy(),
-                "Full_tilts": Full_tilts.numpy()}
-file_name = "2023_09_28_VanillaBO_OneTier_GUEs_iteration{}.mat".format(k)
-savemat(file_name, data_BO)
-
+        # Saving BO for matlab
+        data_BO = {"Thresholds": Thresholds.numpy(),
+                        "Obj": Obj.numpy(),
+                        "best_observed_objective_value": best_observed_objective_value.numpy(),
+                        "optimum_thresholds": optimum_thresholds.numpy(),
+                        "best_rate_so_far": best_value_qNEHVI_all.numpy(),
+                        "Full_tilts": Full_tilts.numpy()}
+        file_name = "2023_09_28_VanillaBO_OneTier_GUEs_iteration{}.mat".format(k)
+        savemat(file_name, data_BO)
 
 #d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
           #"SINR_GUEs": 10 * np.log10(sinr_total_GUEs.numpy()),
