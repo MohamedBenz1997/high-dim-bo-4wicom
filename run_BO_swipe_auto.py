@@ -64,11 +64,11 @@ def generate_initial_data(idx_1, thresholds_vector, Ptx_thresholds_vector, obj_v
         P_Tx_TN = Ptx_thresholds_vector[0, :, 0]
         indx = tf.constant([[idx_1]])
 
-        rand_values = tf.constant([random.uniform(-20.0, 30.0)])
+        rand_values = tf.constant([random.uniform(-25.0, 0.0)])
         new_train_x1 = torch.from_numpy( tf.expand_dims(rand_values, axis=0).numpy()).double()
         BS_tilt = tf.tensor_scatter_nd_update(BS_tilt, indx, rand_values)
         BS_tilt = tf.expand_dims(tf.expand_dims(BS_tilt,axis=0),axis=2)
-        BS_tilt = thresholds_vector #This is for getting the SINR for the opt thresholds after finishing
+        #BS_tilt = thresholds_vector #This is for getting the SINR for the opt thresholds after finishing
         BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
 
         rand_values1 = tf.constant([random.uniform(40.0, 46.0)])
@@ -97,8 +97,8 @@ def generate_initial_data(idx_1, thresholds_vector, Ptx_thresholds_vector, obj_v
         sinr_TN_GUEs = SINR.sinr_TN(LSG_GUEs, P_Tx_TN)
 
         #BO objective: Sum of log of the RSS
-        SINR_sumOftheLog_Obj, Rate_sumOftheLog_Obj, sinr_total_UAVs, sinr_total_GUEs = SINR.BO_Multi_Obj_Cooridor(sinr_TN_UAVs_Corridors, sinr_TN_GUEs, alpha=0.5)
-        Rate_sumOftheLog_Obj, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN, alpha=0.5)
+        SINR_sumOftheLog_Obj, Rate_sumOftheLog_Obj, sinr_total_UAVs, sinr_total_GUEs = SINR.BO_Multi_Obj_Cooridor(sinr_TN_UAVs_Corridors, sinr_TN_GUEs, alpha=0.0)
+        Rate_sumOftheLog_Obj, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN, alpha=0.0)
         SINR_obj = Rate_sumOftheLog_Obj[0].__float__()
         Rate_obj = Rate_sumOftheLog_Obj[0].__float__()
         new_obj1 = SINR_obj
@@ -109,8 +109,8 @@ def generate_initial_data(idx_1, thresholds_vector, Ptx_thresholds_vector, obj_v
         train_obj = torch.cat((train_obj, new_obj), dim=0)
 
         ## Serving BSs indexes and UAVs locations
-        BSs_id_UAVs, Xuser_UAVs_x, Xuser_UAVs_y = SINR.Cell_id(LSG_UAVs_Corridors, Xuser_UAVs)
-        BSs_id_GUEs, Xuser_GUEs_x, Xuser_GUEs_y = SINR.Cell_id(LSG_GUEs, Xuser_GUEs)
+        #BSs_id_UAVs, Xuser_UAVs_x, Xuser_UAVs_y = SINR.Cell_id(LSG_UAVs_Corridors, Xuser_UAVs)
+        #BSs_id_GUEs, Xuser_GUEs_x, Xuser_GUEs_y = SINR.Cell_id(LSG_GUEs, Xuser_GUEs)
 
     return train_x, train_obj
 ""
@@ -183,7 +183,7 @@ def optimize_qnehvi_and_get_observation(model, train_x, sampler, idx_1, threshol
     sinr_TN_GUEs = SINR.sinr_TN(LSG_GUEs, P_Tx_TN)
 
     # BO objective: Sum of log of the RSS
-    Rate_sumOftheLog_Obj, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN, alpha=0.5)
+    Rate_sumOftheLog_Obj, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN, alpha=0.0)
     SINR_obj = Rate_sumOftheLog_Obj[0].__float__()
     Rate_obj = Rate_sumOftheLog_Obj[0].__float__()
     new_obj1 = SINR_obj
@@ -194,7 +194,7 @@ def optimize_qnehvi_and_get_observation(model, train_x, sampler, idx_1, threshol
 #Start BO swiping experiment
 #############################################################
 # BO initial variables
-N_BATCH = 80
+N_BATCH = 30
 MC_SAMPLES = 128
 BATCH_SIZE = 1
 NUM_RESTARTS = 10
@@ -212,17 +212,17 @@ standard_bounds_higher = standard_bounds_higher.tile((2,))
 standard_bounds = torch.cat((standard_bounds_lower, standard_bounds_higher), 0)
 
 if config.IterativeBO_1Threshold == True:
-    bounds_lower = torch.tensor([[-20.0]], dtype=torch.double)
-    bounds_higher = torch.tensor([[30.0]], dtype=torch.double)
+    bounds_lower = torch.tensor([[-25.0]], dtype=torch.double)
+    bounds_higher = torch.tensor([[0.0]], dtype=torch.double)
     bounds = torch.cat((bounds_lower, bounds_higher), 0)
     standard_bounds_lower = torch.tensor([[0.0]], dtype=torch.double)
     standard_bounds_higher = torch.tensor([[1.0]], dtype=torch.double)
     standard_bounds = torch.cat((standard_bounds_lower, standard_bounds_higher), 0)
 
 #ref_point for EHVI
-ref_point = torch.tensor([-5.0, -5.0], dtype=torch.double)
+ref_point = torch.tensor([-1.0, -1.0], dtype=torch.double)
 
-BS_id = list(range(114))
+BS_id = list(range(200))
 random.shuffle(BS_id)
 
 for iteration, i in enumerate(tqdm(BS_id)):
@@ -231,29 +231,11 @@ for iteration, i in enumerate(tqdm(BS_id)):
 
     #For 1st iteration
     if i == BS_id[0]:
-        thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 0.0, tf.float32), axis=0),axis=2)-12.0
+        thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 0.0, tf.float32), axis=0),axis=2)
         Ptx_thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 46.0, 46.0, tf.float32), axis=0),axis=2)
 
-        # # # Alpha 0.5 Best Corridors
-        # thresholds_vector = tf.expand_dims(tf.constant([[
-        #     -9.8102,  -13.0183, -14.1928,  25.8687,  30.4193,  25.6352,  25.0205, -15.3203,  30.6154, -14.3594,
-        #     -11.5712, -10.3334,  20.0784, -16.5769, -10.7310,  15.6762,  27.6900,  29.1826,  21.9059, -11.7631,
-        #     -11.7591, -10.5255,  32.6864, -10.7251, -12.0509, -13.0080, -12.0201, -14.8350, -15.3849,  16.8090,
-        #     -12.3643,  34.8795, -12.1392, -13.2892, -12.7744, -16.7355, -11.6496, -12.2563, -6.8718, -11.0011,
-        #     -7.4486, -12.0740, -9.2410, -11.0125,   35.9105, -10.4298, -10.2161, -18.3366, -15.8579, -8.7873,
-        #     -11.3935,  -9.9674, -14.7851, -10.5096, -10.6762, -11.3624, -14.8511]]), axis=2)
-
-        # Alpha 0.5 Best Corridors, random iterating
-        # thresholds_vector = tf.expand_dims(tf.constant([[
-        #     -16.1038, - 13.4602, - 12.3521,   26.9551, - 13.2374,   29.9630, - 11.7704, - 11.2683,   23.4049, - 13.2939,
-        #     20.2796, - 11.8374,   18.7154, - 11.1245, - 9.9152,   16.5736, - 9.3323,   27.1126,   26.4470, - 13.1050,
-        #     - 9.8243,   22.4399,   34.6753, - 14.4526, - 13.2783, - 12.2372, - 10.0612, - 13.4906, - 12.2336, - 12.6344,
-        #     - 12.9772,   35.0441, - 16.1445, - 14.8551, - 9.5613, - 12.6463, - 13.1192, - 12.5733, - 11.2016,   24.1970,
-        #     - 11.0013, - 12.6641, - 8.3223, - 14.5665, - 15.3501, - 11.9199, - 11.5034, - 12.1394, - 10.4707, - 16.0768,
-        #     - 12.8765,   25.2399, - 10.6521,   36.5998, - 11.4342, - 10.8184, - 13.6407]]), axis=2)
-
         #test
-        obj_vector = torch.tensor([[-2.0961, -2.0961]], dtype=torch.double)
+        obj_vector = torch.tensor([[-0.2529, -0.2529]], dtype=torch.double)
 
 
     #Obtain the training data-set
@@ -313,16 +295,13 @@ for iteration, i in enumerate(tqdm(BS_id)):
 
     #Update the threshold vector and obj vector with BO optimum value
     thresholds_vector_ref = thresholds_vector[0, :, 0]
-    Ptx_thresholds_vector_ref = Ptx_thresholds_vector[0, :, 0]
     indx = tf.constant([[idx_1]])
     # opt_values = tf.constant([optimum_thresholds[0].__float__(), optimum_thresholds[1].__float__()])
     opt_values = tf.constant([optimum_thresholds[0].__float__()])
     thresholds_vector = tf.tensor_scatter_nd_update(thresholds_vector_ref, indx, opt_values)
     thresholds_vector = tf.expand_dims(tf.expand_dims(thresholds_vector, axis=0), axis=2)
 
-    opt_values1 = tf.constant([optimum_thresholds[1].__float__()])
-    Ptx_thresholds_vector = tf.tensor_scatter_nd_update(Ptx_thresholds_vector_ref, indx, opt_values1)
-    Ptx_thresholds_vector = tf.expand_dims(tf.expand_dims(Ptx_thresholds_vector, axis=0), axis=2)
+
 
     obj_vector = torch.from_numpy(tf.expand_dims(best_observed_objective_value, axis=0).numpy())
     Full_tilts = thresholds_vector[:,:,0]
@@ -336,7 +315,7 @@ for iteration, i in enumerate(tqdm(BS_id)):
                 "best_rate_so_far": best_value_qNEHVI_all.numpy(),
                 "Full_tilts": Full_tilts.numpy(),
                 "Full_powers": Full_powers.numpy()}
-    file_name = "2023_08_17_iterative_BO_LambdaHalf_Mix_Corr_ProductRate_SideLobes_RandomIterations_iteration{}_Cell{}.mat".format(iteration,idx_1)
+    file_name = "2023_09_30_IterativeBO_2Tier_GUEs_iteration{}_Cell{}.mat".format(iteration,idx_1)
     savemat(file_name, data_BO)
     #############################################################
     # d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
@@ -350,11 +329,11 @@ for iteration, i in enumerate(tqdm(BS_id)):
     # # savemat("2023_04_08_SINR_Cell_ID_AlphaHalf_Mix.mat", d)
     # savemat("2023_04_25_Alpha0_GUEs_Cell_ID.mat", d)
 
-    d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
-          "SINR_GUEs": 10 * np.log10(sinr_total_GUEs.numpy()),
-          "Rate_UAVs": Rate_UAVs.numpy(),
-          "Rate_GUEs": Rate_GUEs.numpy()}
-    savemat("2023_08_29_SINR_Rate_LambdaHaf_ProductRateObj_IterativeBO_RandomIterations.mat", d)
+    #d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
+          #"SINR_GUEs": 10 * np.log10(sinr_total_GUEs.numpy()),
+          #"Rate_UAVs": Rate_UAVs.numpy(),
+          #"Rate_GUEs": Rate_GUEs.numpy()}
+    #savemat("2023_09_28_IterativeBO_OneTier_GUEs_iteration{}.mat", d)
     #
     # d = {"Cell_id_GUEs":BSs_id_GUEs.numpy(),
     #       "GUEs_x": Xuser_GUEs_x.numpy(),

@@ -50,16 +50,15 @@ plot = Plot()
 #Auto genrating data-sets for BO
 ""
 def generate_initial_data(thresholds_vector, Ptx_thresholds_vector, obj_vector):
+    train_x = thresholds_vector
+    train_x = torch.from_numpy(train_x.numpy()).double()
+    train_obj = obj_vector
+    train_obj = torch.from_numpy(train_obj.numpy()).double()
 
     for j in range(100):
-        train_x = thresholds_vector
-        train_x = torch.from_numpy(train_x.numpy()).double()
-        train_obj = obj_vector
-        train_obj = torch.from_numpy(train_obj.numpy()).double()
-
         new_train_x1 = tf.random.uniform(thresholds_vector.shape, -25.0, 0.0, tf.float32)
         BS_tilt = new_train_x1
-        BS_tilt = thresholds_vector #This is for getting the SINR for the opt thresholds after finishing
+        #BS_tilt = thresholds_vector #This is for getting the SINR for the opt thresholds after finishing
         BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
 
         new_train_x2 = tf.random.uniform(Ptx_thresholds_vector.shape, 40.0, 46.0, tf.float32)
@@ -298,7 +297,7 @@ for k in tqdm(range(N_BATCH)):
                         "optimum_thresholds": optimum_thresholds.numpy(),
                         "best_rate_so_far": best_value_qNEHVI_all.numpy(),
                         "Full_tilts": Full_tilts.numpy()}
-        file_name = "2023_09_28_VanillaBO_OneTier_GUEs_iteration{}.mat".format(k)
+        file_name = "2023_09_29_VanillaBO_OneTier_GUEs_iteration{}.mat".format(k)
         savemat(file_name, data_BO)
 
 #d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
