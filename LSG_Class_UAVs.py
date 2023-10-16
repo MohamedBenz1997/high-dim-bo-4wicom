@@ -29,12 +29,14 @@ class Large_Scale_Gain_drone(Config):
         self.Antenna_spacing = self.Lambda * 0.5
         self.Element_gain = 14.0
 
-    def call(self, D_drone, D_2d_drone, Azi_phi_deg_drone, Elv_thetha_deg_drone, Zdrone, BS_tilt):
+    def call(self, D_drone, D_2d_drone, Azi_phi_deg_drone, Elv_thetha_deg_drone, Zdrone, BS_tilt, BS_HPBW_h):
+        #Getting the BS tilts and horizontal HPBW from the run file
         self.BS_tilt=BS_tilt
+        phi_3dB = BS_HPBW_h
+
         p_LOS = self.Prob_LOS_3GPP_UAVs(D_2d_drone, Zdrone)
         G_dB, G_linear, pl, shadowing_LOS, shadowing_NLOS = self.PL_3GPP_UMa_UAVs(D_drone, D_2d_drone, p_LOS, Zdrone)
-        G_sector = self.sectoring(Azi_phi_deg_drone,
-                                  Elv_thetha_deg_drone)  # this line includes both antenna gain and sectoring effect
+        G_sector = self.sectoring(Azi_phi_deg_drone,Elv_thetha_deg_drone, phi_3dB)  # this line includes both antenna gain and sectoring effect
 
         if self.sectoring_status:
             shadowing_LOS = tf.tile(shadowing_LOS, [1, 3, 1])
@@ -52,17 +54,18 @@ class Large_Scale_Gain_drone(Config):
 
 
     # Incorporate sectoring using different aneta gain
-    def sectoring(self, Azi_phi_deg, Elv_thetha_deg):
+    def sectoring(self, Azi_phi_deg, Elv_thetha_deg, phi_3dB):
         Azi_phi_deg = Azi_phi_deg + 30.0 #This is to make the sectors similar to 3GPP deployment, 30,150,270 deg
+        phi_3dB = phi_3dB[:, :, 0:Azi_phi_deg.shape[2]] #This is to take just the GUEs number or UAV numbers when calculating the AG
         if Elv_thetha_deg.shape[2] == 0:
             Elv_thetha_deg = tf.tile(Elv_thetha_deg, [1, 3, 1]) + self.BS_tilt[:, :, 0:Elv_thetha_deg.shape[2]]
         else:
             Elv_thetha_deg=tf.tile(Elv_thetha_deg, [1, 3, 1])+self.BS_tilt[:,:,0:Elv_thetha_deg.shape[2]] #This is to consider the tilt for every sector seperately
 
         if self.N==1:
-            G_secor0 = self.Antenna_gain_3GPP(Azi_phi_deg, Elv_thetha_deg[:, 0:7, :])
+            G_secor0 = self.Antenna_gain_3GPP(Azi_phi_deg, Elv_thetha_deg[:, 0:7, :],phi_3dB[:, 0:7, :])
         elif self.N==2:
-            G_secor0 = self.Antenna_gain_3GPP(Azi_phi_deg, Elv_thetha_deg[:,0:19,:])
+            G_secor0 = self.Antenna_gain_3GPP(Azi_phi_deg, Elv_thetha_deg[:,0:19,:],phi_3dB[:,0:19,:])
 
         # Azi_phi_deg1= (tf.cast((Azi_phi_deg+120)<180,"float32")*tf.cast((Azi_phi_deg+120)>-180,"float32")*(Azi_phi_deg+120) +
         #              tf.cast((Azi_phi_deg + 120) < -180, "float32") * (Azi_phi_deg + 120 + 360) +
@@ -71,9 +74,9 @@ class Large_Scale_Gain_drone(Config):
                         tf.cast((Azi_phi_deg + 120) < 180.001, "float32") * (Azi_phi_deg + 120))
 
         if self.N==1:
-            G_secor1 = self.Antenna_gain_3GPP(Azi_phi_deg1, Elv_thetha_deg[:, 7:14, :])
+            G_secor1 = self.Antenna_gain_3GPP(Azi_phi_deg1, Elv_thetha_deg[:, 7:14, :],phi_3dB[:, 7:14, :])
         elif self.N==2:
-            G_secor1 = self.Antenna_gain_3GPP(Azi_phi_deg1, Elv_thetha_deg[:,19:38,:])
+            G_secor1 = self.Antenna_gain_3GPP(Azi_phi_deg1, Elv_thetha_deg[:,19:38,:],phi_3dB[:,19:38,:])
         # Azi_phi_deg2 = (tf.cast((Azi_phi_deg+240)<180,"float32")*tf.cast((Azi_phi_deg+240)>-180,"float32")*(Azi_phi_deg+240) +
         #              tf.cast((Azi_phi_deg + 240) < -180, "float32") * (Azi_phi_deg + 240 + 360) +
         #              tf.cast((Azi_phi_deg + 240) > 180, "float32") * (Azi_phi_deg + 240 - 360))
@@ -81,9 +84,9 @@ class Large_Scale_Gain_drone(Config):
                         tf.cast((Azi_phi_deg + 240.0) < 180.001, "float32") * (Azi_phi_deg + 240))
 
         if self.N==1:
-            G_secor2 = self.Antenna_gain_3GPP(Azi_phi_deg2, Elv_thetha_deg[:, 14:, :])
+            G_secor2 = self.Antenna_gain_3GPP(Azi_phi_deg2, Elv_thetha_deg[:, 14:, :],phi_3dB[:, 14:, :])
         elif self.N==2:
-            G_secor2 = self.Antenna_gain_3GPP(Azi_phi_deg2, Elv_thetha_deg[:,38:,:])
+            G_secor2 = self.Antenna_gain_3GPP(Azi_phi_deg2, Elv_thetha_deg[:,38:,:],phi_3dB[:,38:,:])
 
         G_sector = tf.concat([G_secor0, G_secor1, G_secor2], axis=1)
         self.Azi_phi_sector = tf.concat([Azi_phi_deg, Azi_phi_deg1, Azi_phi_deg2], axis=1)
@@ -91,7 +94,7 @@ class Large_Scale_Gain_drone(Config):
         return G_sector
 
     # Calculating antenna gain based on its patter and formulas provided in 3GPP Document 38.901 P.23
-    def Antenna_gain_3GPP(self, Azi_phi_deg, Elv_thetha_deg):
+    def Antenna_gain_3GPP(self, Azi_phi_deg, Elv_thetha_deg, phi_3dB):
         # -------------------------- Array gain
         ind = tf.constant([[[[i for i in range(self.Antenna_elements)]]]])
         phase = tf.expand_dims(Elv_thetha_deg, axis=3)
@@ -103,7 +106,7 @@ class Large_Scale_Gain_drone(Config):
         self.array_gain = 10.0 * tf.math.log(array_gain) / tf.math.log(10.0)
         self.array_gain = self.cut_by_30(self.array_gain)
         # -----------------------------------------------------------------
-        Azi_cut = 12 * (tf.pow(Azi_phi_deg / self.phi_3dB, 2))
+        Azi_cut = 12 * (tf.pow(Azi_phi_deg / phi_3dB, 2))
         Elv_cut = 12 * (tf.pow((Elv_thetha_deg-90) / self.thetha_3dB, 2))
         G_azi = self.cut_by_30(-Azi_cut)
         self.G_azi = self.Element_gain + G_azi

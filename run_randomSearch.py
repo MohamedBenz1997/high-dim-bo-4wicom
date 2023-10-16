@@ -46,7 +46,7 @@ def generate_initial_data(thresholds_vector, Ptx_thresholds_vector, obj_vector):
     for j in tqdm(range(200)):
         new_train_x1 = tf.random.uniform(thresholds_vector.shape, -25.0, 0.0, tf.float32)
         BS_tilt = new_train_x1
-        #BS_tilt = thresholds_vector #This is for getting the SINR for the opt thresholds after finishing
+        BS_tilt = thresholds_vector #This is for getting the SINR for the opt thresholds after finishing
         BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
 
         new_train_x2 = tf.random.uniform(Ptx_thresholds_vector.shape, 40.0, 46.0, tf.float32)
@@ -95,7 +95,7 @@ def generate_initial_data(thresholds_vector, Ptx_thresholds_vector, obj_vector):
     return train_x, train_obj, best_value_all
 
 #Initial config
-thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 0.0, tf.float32), axis=0),axis=2)
+thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 0.0, tf.float32), axis=0),axis=2)-12.0
 Ptx_thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 46.0, 46.0, tf.float32), axis=0),axis=2)
 obj_vector = torch.tensor([[-0.2529, -0.2529]], dtype=torch.double)
 
