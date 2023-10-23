@@ -49,35 +49,35 @@ plot = Plot()
 
 #Auto genrating data-sets for BO
 ""
-def generate_initial_data(idx_1, tilts_vector, HPBW_h_vector, Ptx_thresholds_vector, obj_vector):
+def generate_initial_data(idx_1, tilts_vector, HPBW_v_vector, Ptx_thresholds_vector, obj_vector):
 
     T_1 = tf.expand_dims(tilts_vector[:, idx_1, 0], axis=1)
-    T_2 = tf.expand_dims(HPBW_h_vector[:, idx_1, 0], axis=1)
+    T_2 = tf.expand_dims(HPBW_v_vector[:, idx_1, 0], axis=1)
     train_x = tf.concat([T_1, T_2], axis=1)
     train_x = torch.from_numpy(train_x.numpy()).double()
     train_obj = obj_vector
 
     for j in range(20):
         BS_tilt = tilts_vector[0,:,0]
-        BS_HPBW_h = HPBW_h_vector[0,:,0]
+        BS_HPBW_v = HPBW_v_vector[0,:,0]
         P_Tx_TN = Ptx_thresholds_vector[0, :, 0]
         indx = tf.constant([[idx_1]])
 
         #Setting random tilts
-        rand_values = tf.constant([random.uniform(-20.0, 45.0)])
+        rand_values = tf.constant([random.uniform(-20.0, 0.0)])
         new_train_x1 = torch.from_numpy( tf.expand_dims(rand_values, axis=0).numpy()).double()
         BS_tilt = tf.tensor_scatter_nd_update(BS_tilt, indx, rand_values)
         BS_tilt = tf.expand_dims(tf.expand_dims(BS_tilt,axis=0),axis=2)
-        #BS_tilt = tilts_vector #This is for getting the opt thresholds after finishing
+        # BS_tilt = tilts_vector #This is for getting the opt thresholds after finishing
         BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
 
         #Setting random horizontal HPBW
-        rand_values1 = tf.constant([random.uniform(40.0, 100.0)])
+        rand_values1 = tf.constant([random.uniform(10.0, 70.0)])
         new_train_x2 = torch.from_numpy( tf.expand_dims(rand_values1, axis=0).numpy()).double()
-        BS_HPBW_h = tf.tensor_scatter_nd_update(BS_HPBW_h, indx, rand_values1)
-        BS_HPBW_h = tf.expand_dims(tf.expand_dims(BS_HPBW_h,axis=0),axis=2)
-        BS_HPBW_h = HPBW_h_vector #This is for getting the opt thresholds after finishing
-        BS_HPBW_h = tf.tile(BS_HPBW_h, [2 * config.batch_num, 1, config.Nuser_drop])
+        BS_HPBW_v = tf.tensor_scatter_nd_update(BS_HPBW_v, indx, rand_values1)
+        BS_HPBW_v = tf.expand_dims(tf.expand_dims(BS_HPBW_v,axis=0),axis=2)
+        # BS_HPBW_v = HPBW_v_vector #This is for getting the opt thresholds after finishing
+        BS_HPBW_v = tf.tile(BS_HPBW_v, [2 * config.batch_num, 1, config.Nuser_drop])
 
         P_Tx_TN = Ptx_thresholds_vector #This is for getting the opt thresholds after finishing
         P_Tx_TN = tf.tile(P_Tx_TN, [2 * config.batch_num, 1, config.Nuser_drop])
@@ -89,7 +89,7 @@ def generate_initial_data(idx_1, tilts_vector, HPBW_h_vector, Ptx_thresholds_vec
         data = Terrestrial()
         data.alpha_factor = 0.0  # LEO at 90deg
         data.BS_tilt = BS_tilt
-        data.BS_HPBW_h = BS_HPBW_h
+        data.BS_HPBW_v = BS_HPBW_v
         data.call()
 
         # ------------ Import of the UAVs and GUEs LSG and SINR data
@@ -101,8 +101,8 @@ def generate_initial_data(idx_1, tilts_vector, HPBW_h_vector, Ptx_thresholds_vec
         sinr_TN_GUEs = SINR.sinr_TN(LSG_GUEs, P_Tx_TN)
 
         #BO objective: Sum of log of the RSS
-        SINR_sumOftheLog_Obj, Rate_sumOftheLog_Obj, sinr_total_UAVs, sinr_total_GUEs = SINR.BO_Multi_Obj_Cooridor(sinr_TN_UAVs_Corridors, sinr_TN_GUEs, alpha=0.5)
-        Rate_sumOftheLog_Obj, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN, alpha=0.5)
+        SINR_sumOftheLog_Obj, Rate_sumOftheLog_Obj, sinr_total_UAVs, sinr_total_GUEs = SINR.BO_Multi_Obj_Cooridor(sinr_TN_UAVs_Corridors, sinr_TN_GUEs, alpha=0.0)
+        Rate_sumOftheLog_Obj, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN, alpha=0.0)
         SINR_obj = Rate_sumOftheLog_Obj[0].__float__()
         Rate_obj = Rate_sumOftheLog_Obj[0].__float__()
         new_obj1 = SINR_obj
@@ -135,7 +135,7 @@ def initialize_model(train_x, train_obj):
 ""
 #Optimizes the qNEHVI acquisition function, and returns a new candidate and observation.
 ""
-def optimize_qnehvi_and_get_observation(model, train_x, sampler, idx_1, tilts_vector, HPBW_h_vector, Ptx_thresholds_vector):
+def optimize_qnehvi_and_get_observation(model, train_x, sampler, idx_1, tilts_vector, HPBW_v_vector, Ptx_thresholds_vector):
     acq_func = qNoisyExpectedHypervolumeImprovement(
         model=model,
         ref_point=ref_point,
@@ -154,7 +154,7 @@ def optimize_qnehvi_and_get_observation(model, train_x, sampler, idx_1, tilts_ve
     new_x_ref = new_x
     #2-Updated thresholds
     tilts_vector_ref = tilts_vector[0, :, 0]
-    HPBW_h_vector_ref = HPBW_h_vector[0, :, 0]
+    HPBW_v_vector_ref = HPBW_v_vector[0, :, 0]
     P_Tx_TN = Ptx_thresholds_vector
     indx = tf.constant([[idx_1]])
 
@@ -164,10 +164,10 @@ def optimize_qnehvi_and_get_observation(model, train_x, sampler, idx_1, tilts_ve
     BS_tilt = tf.expand_dims(tf.expand_dims(BS_tilt, axis=0), axis=2)
     BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
 
-    HPBW_h_vector = tf.tensor_scatter_nd_update(HPBW_h_vector_ref, indx, opt_values1)
-    HPBW_h_vector = tf.expand_dims(tf.expand_dims(HPBW_h_vector, axis=0), axis=2)
-    HPBW_h_vector = tf.tile(HPBW_h_vector, [2 * config.batch_num, 1, config.Nuser_drop])
-    BS_HPBW_h = HPBW_h_vector
+    HPBW_v_vector = tf.tensor_scatter_nd_update(HPBW_v_vector_ref, indx, opt_values1)
+    HPBW_v_vector = tf.expand_dims(tf.expand_dims(HPBW_v_vector, axis=0), axis=2)
+    HPBW_v_vector = tf.tile(HPBW_v_vector, [2 * config.batch_num, 1, config.Nuser_drop])
+    BS_HPBW_v = HPBW_v_vector
 
     P_Tx_TN = tf.tile(P_Tx_TN, [2 * config.batch_num, 1, config.Nuser_drop])
 
@@ -176,7 +176,7 @@ def optimize_qnehvi_and_get_observation(model, train_x, sampler, idx_1, tilts_ve
     data = Terrestrial()
     data.alpha_factor = 0.0 #LEO at 90deg
     data.BS_tilt = BS_tilt
-    data.BS_HPBW_h = BS_HPBW_h
+    data.BS_HPBW_v = BS_HPBW_v
     data.call()
 
     # ------------ Import of the UAVs and GUEs LSG and SINR data
@@ -186,7 +186,7 @@ def optimize_qnehvi_and_get_observation(model, train_x, sampler, idx_1, tilts_ve
     sinr_TN_GUEs = SINR.sinr_TN(LSG_GUEs, P_Tx_TN)
 
     # BO objective: Sum of log of the RSS
-    Rate_sumOftheLog_Obj, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN, alpha=0.5)
+    Rate_sumOftheLog_Obj, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN, alpha=0.0)
     SINR_obj = Rate_sumOftheLog_Obj[0].__float__()
     Rate_obj = Rate_sumOftheLog_Obj[0].__float__()
     new_obj1 = SINR_obj
@@ -205,8 +205,8 @@ RAW_SAMPLES = 512
 NOISE_SE = torch.tensor([0.001, 0.001], dtype=torch.double)
 
 #2Thresholds bounds
-bounds_lower = torch.tensor([[-20.0, 40.0]], dtype=torch.double)
-bounds_higher = torch.tensor([[45.0, 100.0]], dtype=torch.double)
+bounds_lower = torch.tensor([[-20.0, 10.0]], dtype=torch.double)
+bounds_higher = torch.tensor([[0.0, 70.0]], dtype=torch.double)
 bounds = torch.cat((bounds_lower, bounds_higher), 0)
 standard_bounds_lower = torch.tensor([[0.0]], dtype=torch.double)
 standard_bounds_lower = standard_bounds_lower.tile((2,))
@@ -216,10 +216,10 @@ standard_bounds = torch.cat((standard_bounds_lower, standard_bounds_higher), 0)
 
 
 #ref_point for EHVI
-ref_point = torch.tensor([-10.0, -10.0], dtype=torch.double)
+ref_point = torch.tensor([0.0, 0.0], dtype=torch.double)
 
-BS_id = list(range(150))
-random.shuffle(BS_id)
+BS_id = list(range(114))
+# random.shuffle(BS_id)
 
 for iteration, i in enumerate(tqdm(BS_id)):
 
@@ -228,13 +228,22 @@ for iteration, i in enumerate(tqdm(BS_id)):
     #For 1st iteration
     if i == BS_id[0]:
         tilts_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 0.0, tf.float32), axis=0),axis=2)
-        HPBW_h_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 70.0, 70.0, tf.float32), axis=0),axis=2)
+        HPBW_v_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 70.0, 70.0, tf.float32), axis=0),axis=2)
         Ptx_thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 46.0, 46.0, tf.float32), axis=0),axis=2)
-        obj_vector = torch.tensor([[-4.4251, -4.4251]], dtype=torch.double)
+        obj_vector = torch.tensor([[3.7212, 3.7212]], dtype=torch.double)
+
+        # Iterative-BO, tilt+hHPBW, Corr
+        # tilts_vector = tf.expand_dims(tf.constant([[]]), axis=2)
+        # HPBW_v_vector = tf.expand_dims(tf.constant([[]]), axis=2)
+        #
+        # # Iterative-BO, tilt+vHPBW, Corr
+        # tilts_vector = tf.expand_dims(tf.constant([[]]), axis=2)
+        # HPBW_v_vector = tf.expand_dims(tf.constant([[]]), axis=2)
+
 
 
     #Obtain the training data-set
-    train_x, train_obj = generate_initial_data(idx_1, tilts_vector, HPBW_h_vector, Ptx_thresholds_vector, obj_vector)
+    train_x, train_obj = generate_initial_data(idx_1, tilts_vector, HPBW_v_vector, Ptx_thresholds_vector, obj_vector)
     train_x_qnehvi, train_obj_qnehvi = train_x, train_obj
 
     # call functions to generate initial training data and initialize model
@@ -253,7 +262,7 @@ for iteration, i in enumerate(tqdm(BS_id)):
         # define the qEI and qNEI acquisition modules using a QMC sampler
         qnehvi_sampler = SobolQMCNormalSampler(MC_SAMPLES)
         # optimize acquisition functions and get new observations
-        new_x_qnehvi, new_obj_qnehvi = optimize_qnehvi_and_get_observation(model_qnehvi, train_x_qnehvi, qnehvi_sampler, idx_1, tilts_vector, HPBW_h_vector, Ptx_thresholds_vector)
+        new_x_qnehvi, new_obj_qnehvi = optimize_qnehvi_and_get_observation(model_qnehvi, train_x_qnehvi, qnehvi_sampler, idx_1, tilts_vector, HPBW_v_vector, Ptx_thresholds_vector)
         # update training points
         train_x_qnehvi = torch.cat([train_x_qnehvi, new_x_qnehvi])
         train_obj_qnehvi = torch.cat([train_obj_qnehvi, new_obj_qnehvi])
@@ -296,15 +305,15 @@ for iteration, i in enumerate(tqdm(BS_id)):
     tilts_vector = tf.tensor_scatter_nd_update(tilts_vector_ref, indx, opt_values)
     tilts_vector = tf.expand_dims(tf.expand_dims(tilts_vector, axis=0), axis=2)
 
-    HPBW_h_vector_ref = HPBW_h_vector[0, :, 0]
+    HPBW_v_vector_ref = HPBW_v_vector[0, :, 0]
     opt_values2 = tf.constant([optimum_thresholds[1].__float__()])
-    HPBW_h_vector = tf.tensor_scatter_nd_update(HPBW_h_vector_ref, indx, opt_values2)
-    HPBW_h_vector = tf.expand_dims(tf.expand_dims(HPBW_h_vector, axis=0), axis=2)
+    HPBW_v_vector = tf.tensor_scatter_nd_update(HPBW_v_vector_ref, indx, opt_values2)
+    HPBW_v_vector = tf.expand_dims(tf.expand_dims(HPBW_v_vector, axis=0), axis=2)
 
     obj_vector = torch.from_numpy(tf.expand_dims(best_observed_objective_value, axis=0).numpy())
     Full_tilts = tilts_vector[:,:,0]
     Full_powers = Ptx_thresholds_vector[:, :, 0]
-    Full_HPBW_h = HPBW_h_vector[:,:,0]
+    Full_HPBW_h = HPBW_v_vector[:,:,0]
 
     # Saving BO for matlab
     data_BO = {"Thresholds": Thresholds.numpy(),
@@ -315,6 +324,20 @@ for iteration, i in enumerate(tqdm(BS_id)):
                 "Full_tilts": Full_tilts.numpy(),
                 "Full_powers": Full_powers.numpy(),
                 "Full_HPBW_h": Full_HPBW_h.numpy()}
-    file_name = "2023_10_16_IterativeBO_Tilt_HPBW_iteration{}_Cell{}.mat".format(iteration,idx_1)
+    file_name = "2023_10_23_IterativeBO_Tilt_vHPBW_GUEs_iteration{}_Cell{}.mat".format(iteration,idx_1)
     savemat(file_name, data_BO)
+
+    # d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
+    #       "SINR_GUEs": 10 * np.log10(sinr_total_GUEs.numpy()),
+    #       "Rate_UAVs": Rate_UAVs.numpy(),
+    #       "Rate_GUEs": Rate_GUEs.numpy()}
+    # savemat("2023_10_18_IterativeBO_Tilt_hHPBW_Corr_iteration{}.mat", d)
+    #
+    # d = {"Cell_id_GUEs":BSs_id_GUEs.numpy(),
+    #       "GUEs_x": Xuser_GUEs_x.numpy(),
+    #       "GUEs_y": Xuser_GUEs_y.numpy(),
+    #       "Cell_id_UAVs": BSs_id_UAVs.numpy(),
+    #       "UAVs_x": Xuser_UAVs_x.numpy(),
+    #       "UAVs_y": Xuser_UAVs_y.numpy()}
+    # savemat("2023_06_21_Cell_ID_Alpha0_ProductRateObj_LOS.mat", d)
 
