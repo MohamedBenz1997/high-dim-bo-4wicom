@@ -68,7 +68,7 @@ def generate_initial_data(idx_1, tilts_vector, HPBW_v_vector, Ptx_thresholds_vec
         new_train_x1 = torch.from_numpy( tf.expand_dims(rand_values, axis=0).numpy()).double()
         BS_tilt = tf.tensor_scatter_nd_update(BS_tilt, indx, rand_values)
         BS_tilt = tf.expand_dims(tf.expand_dims(BS_tilt,axis=0),axis=2)
-        # BS_tilt = tilts_vector #This is for getting the opt thresholds after finishing
+        BS_tilt = tilts_vector #This is for getting the opt thresholds after finishing
         BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
 
         #Setting random horizontal HPBW
@@ -76,7 +76,7 @@ def generate_initial_data(idx_1, tilts_vector, HPBW_v_vector, Ptx_thresholds_vec
         new_train_x2 = torch.from_numpy( tf.expand_dims(rand_values1, axis=0).numpy()).double()
         BS_HPBW_v = tf.tensor_scatter_nd_update(BS_HPBW_v, indx, rand_values1)
         BS_HPBW_v = tf.expand_dims(tf.expand_dims(BS_HPBW_v,axis=0),axis=2)
-        # BS_HPBW_v = HPBW_v_vector #This is for getting the opt thresholds after finishing
+        BS_HPBW_v = HPBW_v_vector #This is for getting the opt thresholds after finishing
         BS_HPBW_v = tf.tile(BS_HPBW_v, [2 * config.batch_num, 1, config.Nuser_drop])
 
         P_Tx_TN = Ptx_thresholds_vector #This is for getting the opt thresholds after finishing
@@ -101,8 +101,8 @@ def generate_initial_data(idx_1, tilts_vector, HPBW_v_vector, Ptx_thresholds_vec
         sinr_TN_GUEs = SINR.sinr_TN(LSG_GUEs, P_Tx_TN)
 
         #BO objective: Sum of log of the RSS
-        SINR_sumOftheLog_Obj, Rate_sumOftheLog_Obj, sinr_total_UAVs, sinr_total_GUEs = SINR.BO_Multi_Obj_Cooridor(sinr_TN_UAVs_Corridors, sinr_TN_GUEs, alpha=0.0)
-        Rate_sumOftheLog_Obj, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN, alpha=0.0)
+        SINR_sumOftheLog_Obj, Rate_sumOftheLog_Obj, sinr_total_UAVs, sinr_total_GUEs = SINR.BO_Multi_Obj_Cooridor(sinr_TN_UAVs_Corridors, sinr_TN_GUEs, alpha=0.5)
+        Rate_sumOftheLog_Obj, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN, alpha=0.5)
         SINR_obj = Rate_sumOftheLog_Obj[0].__float__()
         Rate_obj = Rate_sumOftheLog_Obj[0].__float__()
         new_obj1 = SINR_obj
@@ -227,8 +227,8 @@ for iteration, i in enumerate(tqdm(BS_id)):
 
     #For 1st iteration
     if i == BS_id[0]:
-        tilts_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 0.0, tf.float32), axis=0),axis=2)
-        HPBW_v_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 70.0, 70.0, tf.float32), axis=0),axis=2)
+        tilts_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 0.0, tf.float32), axis=0),axis=2)-12.0
+        HPBW_v_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 10.0, 10.0, tf.float32), axis=0),axis=2)
         Ptx_thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 46.0, 46.0, tf.float32), axis=0),axis=2)
         obj_vector = torch.tensor([[3.7212, 3.7212]], dtype=torch.double)
 
@@ -239,6 +239,15 @@ for iteration, i in enumerate(tqdm(BS_id)):
         # # Iterative-BO, tilt+vHPBW, Corr
         # tilts_vector = tf.expand_dims(tf.constant([[]]), axis=2)
         # HPBW_v_vector = tf.expand_dims(tf.constant([[]]), axis=2)
+
+        # test
+        tilts_vector = tf.expand_dims(tf.constant([[
+            -13.0207, - 12.9484, - 11.9826,   15.4027, - 12.4238, - 10.5586, - 12.3057, - 11.9078, - 12.9230, - 11.9998,
+            25.1004, - 11.7585, - 11.4932, - 11.6491,   16.8382, - 13.6508, - 12.2370,   27.1016, - 9.0935, - 13.7953,
+            - 12.9628,   23.8081, - 12.3913, - 15.7111, - 11.8546, - 11.2883,   16.0281, - 13.2919, - 10.8156, - 12.4919,
+            - 12.4558,   18.3018,    5.4751, - 12.3395,   15.1111, - 15.2842, - 16.7975, - 10.4924, - 11.3581, - 13.5355,
+            - 12.8850, - 12.3965, - 12.1095, - 12.9262,   11.3447, - 13.2463,    5.0000, - 14.0427, - 13.8283, - 10.8653,
+            - 12.9965, - 11.0069, - 10.9197, - 11.6353, - 15.3054, - 11.0710, - 10.9625]]), axis=2)
 
 
 
@@ -327,11 +336,11 @@ for iteration, i in enumerate(tqdm(BS_id)):
     file_name = "2023_10_23_IterativeBO_Tilt_vHPBW_GUEs_iteration{}_Cell{}.mat".format(iteration,idx_1)
     savemat(file_name, data_BO)
 
-    # d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
-    #       "SINR_GUEs": 10 * np.log10(sinr_total_GUEs.numpy()),
-    #       "Rate_UAVs": Rate_UAVs.numpy(),
-    #       "Rate_GUEs": Rate_GUEs.numpy()}
-    # savemat("2023_10_18_IterativeBO_Tilt_hHPBW_Corr_iteration{}.mat", d)
+    d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
+          "SINR_GUEs": 10 * np.log10(sinr_total_GUEs.numpy()),
+          "Rate_UAVs": Rate_UAVs.numpy(),
+          "Rate_GUEs": Rate_GUEs.numpy()}
+    savemat("2023_10_18_IterativeBO_Tilt_hHPBW_Corr_iteration{}.mat", d)
     #
     # d = {"Cell_id_GUEs":BSs_id_GUEs.numpy(),
     #       "GUEs_x": Xuser_GUEs_x.numpy(),

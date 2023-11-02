@@ -222,9 +222,11 @@ class DeployHex(Config):
                 Xuser = tf.concat([Xuser_hotspot, Xuser_not_hotspot], axis=1)
 
         if self.UAVs_highway:
-            Xuser_ground=Xuser[:, 0:int(self.GUE_ratio * self.Nuser_drop),:]
 
-            #UAVs in Corridor
+            Xuser_ground = Xuser[:, 0:int(self.GUE_ratio * self.Nuser_drop), :]
+
+            #Mohamed UAVs Corr
+            #################################################################
             Xuser_UAVs_Xaxis = tf.expand_dims(Xuser[:, int(self.GUE_ratio * self.Nuser_drop):,0],axis=2)
             Xuser_UAVs_Yaxis = tf.expand_dims(Xuser[:, int(self.GUE_ratio * self.Nuser_drop):, 1], axis=2)
             Xuser_UAVs_Zaxis = tf.expand_dims(Xuser[:, int(self.GUE_ratio * self.Nuser_drop):, 2], axis=2)
@@ -250,10 +252,38 @@ class DeployHex(Config):
             Xuser_UAVs_Zaxis3 = tf.random.uniform(Xuser_UAVs_Xaxis[:,int((self.UAV_ratio * self.Nuser_drop)/2):int((self.UAV_ratio * self.Nuser_drop)*3/4),:].shape, self.h_corr3, self.h_corr3)
             Xuser_UAVs_Zaxis4 = tf.random.uniform(Xuser_UAVs_Xaxis[:,int((self.UAV_ratio * self.Nuser_drop)*3/4):,:].shape, self.h_corr4, self.h_corr4)
             Xuser_UAVs_Zaxis = tf.concat([Xuser_UAVs_Zaxis1, Xuser_UAVs_Zaxis2, Xuser_UAVs_Zaxis3, Xuser_UAVs_Zaxis4], axis=1)
+            #################################################################
+
+            #Matteo UAVs Corr
+            #################################################################
+            # Xuser_UAVs_Xaxis = tf.expand_dims(Xuser[:, int(self.GUE_ratio * self.Nuser_drop):,0],axis=2)
+            # Xuser_UAVs_Yaxis = tf.expand_dims(Xuser[:, int(self.GUE_ratio * self.Nuser_drop):, 1], axis=2)
+            # Xuser_UAVs_Zaxis = tf.expand_dims(Xuser[:, int(self.GUE_ratio * self.Nuser_drop):, 2], axis=2)
+            #
+            # Xuser_UAVs_Xaxis=tf.random.uniform(Xuser_UAVs_Xaxis.shape, -200.0, 200.0)
+            # Xuser_UAVs_Yaxis=tf.random.uniform(Xuser_UAVs_Yaxis.shape, -400.0, 400.0)
+            #
+            #
+            # Xuser_UAVs_Xaxis_Highway1 = tf.random.uniform(Xuser_UAVs_Xaxis[:,0:int((self.UAV_ratio * self.Nuser_drop)/4),:].shape, -220.0, -180.0)
+            # Xuser_UAVs_Xaxis_Highway2 = tf.random.uniform(Xuser_UAVs_Xaxis[:,int((self.UAV_ratio * self.Nuser_drop)/4):int((self.UAV_ratio * self.Nuser_drop)/2),:].shape, -120, -80)
+            # Xuser_UAVs_Xaxis_Highway3 = tf.random.uniform(Xuser_UAVs_Xaxis[:,int((self.UAV_ratio * self.Nuser_drop)/2):int((self.UAV_ratio * self.Nuser_drop)*3/4),:].shape, 80, 120)
+            # Xuser_UAVs_Xaxis_Highway4 = tf.random.uniform(Xuser_UAVs_Xaxis[:,int((self.UAV_ratio * self.Nuser_drop)*3/4):,:].shape, 180.0, 220.0)
+            # Xuser_UAVs_Xaxis = tf.concat([Xuser_UAVs_Xaxis_Highway1, Xuser_UAVs_Xaxis_Highway2, Xuser_UAVs_Xaxis_Highway3, Xuser_UAVs_Xaxis_Highway4], axis=1)
+            #
+            # Xuser_UAVs_Yaxis1 = tf.random.uniform(Xuser_UAVs_Xaxis[:,0:int((self.UAV_ratio * self.Nuser_drop)/4),:].shape,  -400.0, 400.0)
+            # Xuser_UAVs_Yaxis2 = tf.random.uniform(Xuser_UAVs_Xaxis[:,int((self.UAV_ratio * self.Nuser_drop)/4):int((self.UAV_ratio * self.Nuser_drop)/2),:].shape, -400.0, 400.0)
+            # Xuser_UAVs_Yaxis3 = tf.random.uniform(Xuser_UAVs_Xaxis[:,int((self.UAV_ratio * self.Nuser_drop)/2):int((self.UAV_ratio * self.Nuser_drop)*3/4),:].shape, -400.0, 400.0)
+            # Xuser_UAVs_Yaxis4 = tf.random.uniform(Xuser_UAVs_Xaxis[:,int((self.UAV_ratio * self.Nuser_drop)*3/4):,:].shape, -400.0, 400.0)
+            # Xuser_UAVs_Yaxis = tf.concat([Xuser_UAVs_Yaxis1, Xuser_UAVs_Yaxis2, Xuser_UAVs_Yaxis3, Xuser_UAVs_Yaxis4], axis=1)
+            #
+            # Xuser_UAVs_Zaxis1 = tf.random.uniform(Xuser_UAVs_Xaxis[:,0:int((self.UAV_ratio * self.Nuser_drop)/4),:].shape, self.h_corr1, self.h_corr1)
+            # Xuser_UAVs_Zaxis2 = tf.random.uniform(Xuser_UAVs_Xaxis[:,int((self.UAV_ratio * self.Nuser_drop)/4):int((self.UAV_ratio * self.Nuser_drop)/2),:].shape, self.h_corr2, self.h_corr2)
+            # Xuser_UAVs_Zaxis3 = tf.random.uniform(Xuser_UAVs_Xaxis[:,int((self.UAV_ratio * self.Nuser_drop)/2):int((self.UAV_ratio * self.Nuser_drop)*3/4),:].shape, self.h_corr3, self.h_corr3)
+            # Xuser_UAVs_Zaxis4 = tf.random.uniform(Xuser_UAVs_Xaxis[:,int((self.UAV_ratio * self.Nuser_drop)*3/4):,:].shape, self.h_corr4, self.h_corr4)
+            # Xuser_UAVs_Zaxis = tf.concat([Xuser_UAVs_Zaxis1, Xuser_UAVs_Zaxis2, Xuser_UAVs_Zaxis3, Xuser_UAVs_Zaxis4], axis=1)
+            #################################################################
 
             Xuser_UAVs = tf.concat([Xuser_UAVs_Xaxis, Xuser_UAVs_Yaxis, Xuser_UAVs_Zaxis], axis=2)
-
-
             Xuser = tf.concat([Xuser_ground, Xuser_UAVs], axis=1)
 
             if self.GUEs_debug:
@@ -588,10 +618,18 @@ class DeployHex(Config):
         T0_center_pos = [0] * len(self.T0)
         fig, ax = plt.subplots(1, 1)
         if self.UAVs_highway:
+            #Mohamed Corr
             plt.vlines(-630, -780, 780, 'red', linewidth=8)
             plt.hlines(-630, -780, 780, 'green', linewidth=8)
             plt.hlines(630, -780, 780, 'brown', linewidth=8)
             plt.vlines(630, -780, 780, 'gray', linewidth=8)
+
+            # #Matteo Corr
+            # plt.vlines(-200, -400, 400, 'red', linewidth=8)
+            # plt.vlines(-100, -400, 400, 'green', linewidth=8)
+            # plt.vlines(100, -400, 400, 'brown', linewidth=8)
+            # plt.vlines(200, -400, 400, 'gray', linewidth=8)
+
         for i in range(len(self.T0)):
             T0_center_pos[i] = hex_to_pixel(self.layout, self.T0[i])
             ax.plot(T0_center_pos[i].x, T0_center_pos[i].y, "ko")
@@ -601,9 +639,9 @@ class DeployHex(Config):
             corners = polygon_corners(self.layout, self.T0[i])
             x, y = get_corners(corners)
             ax.plot(x, y, 'black',  zorder=1)
-        # for i in range(int(self.GUE_ratio * self.Nuser_drop), self.Nuser_drop):
+        for i in range(int(self.GUE_ratio * self.Nuser_drop), self.Nuser_drop):
         # for i in range(0,int(self.GUE_ratio * self.Nuser_drop)):
-        for i in range(self.Nuser_drop):
+        # for i in range(self.Nuser_drop):
             if i == 0:
                 # ax.plot(Xap[0, i, 0], Xap[0, i, 1], 'x', color='brown', label="BS")
                 # ax.text(Xap[0, i, 0], Xap[0, i, 1], str(i), color='brown', label="BS")
@@ -669,9 +707,9 @@ class DeployHex(Config):
 # #test the class
 # config = Config()
 # ----------- This is where you see the deployed users on the hex grid
-#deployment = DeployHex()
-#deployment.call()
-#deployment.plot_hex()
+# deployment = DeployHex()
+# deployment.call()
+# deployment.plot_hex()
 
 #Wraparound showing
 # Xap,Xuser=deployment.call()
