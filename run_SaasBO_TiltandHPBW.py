@@ -136,8 +136,8 @@ def generate_initial_data(tilts_vector, HPBW_v_vector, Ptx_thresholds_vector, ob
         train_obj = torch.cat((train_obj, new_obj), dim=0)
 
     # Save the torch tensors to a file with .pt extension to be loaded using python later
-    file_name = "2023_11_02_HDBOEK_Tilt_vHPBW_Corr_DataSet.pt"
-    torch.save({"train_x": train_x, "train_obj": train_obj}, file_name)
+    # file_name = "2023_11_02_HDBOEK_Tilt_vHPBW_Corr_DataSet.pt"
+    # torch.save({"train_x": train_x, "train_obj": train_obj}, file_name)
 
     return train_x, train_obj
 
