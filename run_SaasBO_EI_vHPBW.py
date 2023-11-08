@@ -47,14 +47,14 @@ plot = Plot()
 
 def generate_initial_data(tilts_vector, HPBW_v_vector, Ptx_thresholds_vector, obj_vector, data_size):
 
-    train_x = tilts_vector[:, :, 0]
+    train_x = HPBW_v_vector[:, :, 0]
     train_x = torch.from_numpy(train_x.numpy()).double()
     train_obj = obj_vector
 
     for j in range(data_size):
         if config.Specialized_BO == False:
             ##Setting Random tilts for all BSs creating a data set
-            BS_tilt = tf.random.uniform(tilts_vector.shape, -20, 45)
+            BS_HPBW_v = tf.random.uniform(HPBW_v_vector.shape, 10, 30)
             ########################################################
             ##Different sets of samples in the initial data-set
             ########################################################
@@ -89,18 +89,17 @@ def generate_initial_data(tilts_vector, HPBW_v_vector, Ptx_thresholds_vector, ob
                 BS_tilt = tf.tensor_scatter_nd_update(BS_tilt, indx, tf.constant([Update_indice]))
             BS_tilt = tf.expand_dims(tf.expand_dims(BS_tilt, axis=0), axis=2)
 
-        new_train_x = torch.from_numpy(BS_tilt[:, :, 0].numpy()).double()
-        # BS_tilt = tilts_vector  # This is for getting the SINR for the opt thresholds after finishing
+        new_train_x = torch.from_numpy(BS_HPBW_v[:, :, 0].numpy()).double()
+
+        # BS_HPBW_v = HPBW_v_vector  # This is for getting the SINR for the opt thresholds after finishing
+        BS_HPBW_v = tf.tile(BS_HPBW_v, [2 * config.batch_num, 1, config.Nuser_drop])
+
+        BS_tilt = tilts_vector  # This is for getting the SINR for the opt thresholds after finishing
         BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
 
-        # Setting Random powers for creating a data set
-        # P_Tx_TN = tf.random.uniform(Ptx_thresholds_vector.shape, 36, 46)
-        # new_train_x = torch.from_numpy(P_Tx_TN[:,:,0].numpy()).double()
         P_Tx_TN = Ptx_thresholds_vector  # This is for getting the SINR for the opt thresholds after finishing
         P_Tx_TN = tf.tile(P_Tx_TN, [2 * config.batch_num, 1, config.Nuser_drop])
 
-        BS_HPBW_v = HPBW_v_vector  # This is for getting the SINR for the opt thresholds after finishing
-        BS_HPBW_v = tf.tile(BS_HPBW_v, [2 * config.batch_num, 1, config.Nuser_drop])
 
         # Run the simulator
         data = Terrestrial()
@@ -141,14 +140,21 @@ def generate_initial_data(tilts_vector, HPBW_v_vector, Ptx_thresholds_vector, ob
 
 # Run BO loop
 ""
-BO_itertions = 200
-data_size = 918
+BO_itertions = 100
+data_size = 200
 
 # Initial tilts and powers and obj value
-tilts_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 0.0, tf.float32), axis=0),axis=2)-12.0
+# tilts_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 0.0, tf.float32), axis=0),axis=2)-12.0
+tilts_vector = tf.expand_dims(tf.constant([[
+    -13.8631, - 9.8419, - 12.8234,   33.5664, - 9.9551,   29.5257, - 12.0700,   17.4982, - 13.0527, - 11.9808,
+    24.8476, - 13.2057,   35.8744, - 12.1665, - 8.0000, - 10.5512,   22.0820, - 12.5277, - 14.1143,   23.1800,
+    25.8866,   29.8430,   37.1068, - 13.1227, - 13.5094, - 8.9340, - 12.4654, - 12.8602, - 13.1440,   35.7825,
+    - 13.4270, - 12.0730, - 13.0696,   27.5800, - 11.6572, - 12.9629, - 12.6227, - 9.4583, - 11.2001, - 13.3936,
+    - 10.7517, - 12.6729, - 10.1889, - 11.8640, - 9.7783, - 12.0929,   43.2390, - 12.6582, - 14.1254,   23.8554,
+    - 12.1073, - 11.6695, - 13.6616,   43.4639, - 12.4544, - 12.4960, - 10.4618]]), axis=2)
 HPBW_v_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 10.0, 10.0, tf.float32), axis=0),axis=2)
 Ptx_thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 46.0, 46.0, tf.float32), axis=0),axis=2)
-obj_vector = torch.tensor([[-3.0599]], dtype=torch.double)
+obj_vector = torch.tensor([[2.0075]], dtype=torch.double)
 
 # Creat the training data-set
 train_x, train_obj = generate_initial_data(tilts_vector, HPBW_v_vector, Ptx_thresholds_vector, obj_vector,data_size)
@@ -196,8 +202,8 @@ for i in tqdm(range(BO_itertions)):
         # Optimizes the qEI acquisition function, and returns a new candidate
         ########################################################
         DIM = 57
-        lower_bound = -20.0
-        upper_bound = 45.0
+        lower_bound = 10.0
+        upper_bound = 30.0
         bounds = torch.cat((torch.zeros(1, DIM) + lower_bound, torch.zeros(1, DIM) + upper_bound))
 
         EI = qExpectedImprovement(model=model, best_f=train_obj.max())
@@ -208,9 +214,9 @@ for i in tqdm(range(BO_itertions)):
             num_restarts=10,
             raw_samples=1024, )
 
-        BS_tilt = tf.constant(candidates.numpy())
-        BS_tilt = tf.expand_dims(BS_tilt, axis=2)
-        BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
+        BS_HPBW_v = tf.constant(candidates.numpy())
+        BS_HPBW_v = tf.expand_dims(BS_HPBW_v, axis=2)
+        BS_HPBW_v = tf.tile(BS_HPBW_v, [2 * config.batch_num, 1, config.Nuser_drop])
 
     elif config.Specialized_BO == True:
         # Up-cells
@@ -257,17 +263,16 @@ for i in tqdm(range(BO_itertions)):
         candidates = combined_opt_nonOpt_train_x
         candidates = candidates[0, :].view(1, 57)
 
-        BS_tilt = tf.constant(candidates.numpy())
-        BS_tilt = tf.expand_dims(BS_tilt, axis=2)
-        BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
+        BS_HPBW_v = tf.constant(candidates.numpy())
+        BS_HPBW_v = tf.expand_dims(BS_tilt, axis=2)
+        BS_HPBW_v = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
 
     # Run simulator based on new candidates
     ########################################################
-    # If tilts are not being optimized
-    # BS_tilt = tf.tile(tilts_vector, [2 * config.batch_num, 1, config.Nuser_drop])
-    # If power and vHPBW are not being optimized
+
+    # If power and tilts are not being optimized
     P_Tx_TN = tf.tile(Ptx_thresholds_vector, [2 * config.batch_num, 1, config.Nuser_drop])
-    BS_HPBW_v = HPBW_v_vector
+    BS_tilt = tf.tile(tilts_vector, [2 * config.batch_num, 1, config.Nuser_drop])
 
     data = Terrestrial()
     data.alpha_factor = 0.0  # LEO at 90deg
@@ -299,8 +304,8 @@ for i in tqdm(range(BO_itertions)):
     best_rate_so_far = tf.concat([best_rate_so_far, best_value], axis=0)
 
     # BO Outputs
-    Thresholds = train_x[data_size:, :]
-    Obj = train_obj[data_size:, :]
+    Thresholds = train_x
+    Obj = train_obj
     Thresholds = Thresholds.numpy()
     Thresholds = tf.convert_to_tensor(Thresholds)
     Obj = Obj.numpy()
@@ -308,7 +313,9 @@ for i in tqdm(range(BO_itertions)):
     best_observed_objective_value = tf.reduce_max(Obj, axis=0)
     optimum_thresholds = tf.tile(tf.cast(Obj == best_observed_objective_value, "float64"), [1, 1]) * Thresholds
     optimum_thresholds = tf.reduce_sum(optimum_thresholds, axis=0)
-    Full_tilts = optimum_thresholds
+    Full_tilts = tilts_vector[:,:,0]
+    Full_powers = Ptx_thresholds_vector[:, :, 0]
+    Full_HPBW_h = optimum_thresholds
 
     # Saving BO data for matlab
     data_BO = {"Thresholds": Thresholds.numpy(),
@@ -316,8 +323,9 @@ for i in tqdm(range(BO_itertions)):
                "best_observed_objective_value": best_observed_objective_value.numpy(),
                "optimum_thresholds": optimum_thresholds.numpy(),
                "best_rate_so_far": best_rate_so_far.numpy(),
-               "Full_tilts": Full_tilts.numpy()}
-    file_name = "2023_11_03_HDBO_Corr_900samples_iteration{}.mat".format(i)
+               "Full_tilts": Full_tilts.numpy(),
+               "Full_HPBW_h": Full_HPBW_h.numpy()}
+    file_name = "2023_11_08_HDBOEK_Corr_vHPBW_iteration{}.mat".format(i)
     savemat(file_name, data_BO)
 
     # d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
