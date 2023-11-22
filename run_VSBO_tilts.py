@@ -1,7 +1,7 @@
 """
 Created on Thu Nov 16 11:57:05 2023
 
-This is the VS-BO for optimizing wirelees networks
+This is the VS-BO for optimizing wireless networks
 @author: Mohamed Benzaghta
 """
 
@@ -22,7 +22,7 @@ def makedirs(dirname):
 
 
 ### Initial parameters
-N_FS = 20
+N_FS = 10
 acq_optim_method = 'LBFGS'
 ### use CMAES to sample unimportant variables
 less_important_sampling = args.sampling
@@ -31,10 +31,10 @@ object_dim = 57
 lower_bound = -20.0
 upper_bound = 0.0
 bounds = torch.cat((torch.zeros(1, object_dim) + lower_bound, torch.zeros(1, object_dim) + upper_bound))
-total_budget = 400
+total_budget = 2000
 
 ###Initial simulator parameters
-data_size = 100
+data_size = 200
 tilts_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 0.0, tf.float32), axis=0),axis=2)
 HPBW_v_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 10.0, 10.0, tf.float32), axis=0),axis=2)
 Ptx_thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 46.0, 46.0, tf.float32), axis=0),axis=2)
@@ -60,7 +60,7 @@ while (iter_num < total_budget):
         BO_instance.GP_fitting_active(GP_Matern)
         BO_instance.BO_acq_optim_active(optim_method=acq_optim_method)
         ### sampling on unimportant variables
-        BO_instance.data_update(method=less_important_sampling, n_sampling=20)
+        BO_instance.data_update(iter_num, method=less_important_sampling, n_sampling=20)
 
     except ValueError as e:
         if (e.args[0] == 'Too many cov mat singular!'):
@@ -91,8 +91,12 @@ while (iter_num < total_budget):
         F_chosen.append(BO_instance.active_f_list)
         if (less_important_sampling == 'CMAES_posterior'):
             BO_instance.CMAES_update()
-        # print(BO_instance.active_f_list)
+        #print(BO_instance.active_f_list)
         print(BO_instance.active_f_dims)
+        data_VS = {"variables_list": BO_instance.active_f_list.numpy(),
+                   "active_variables": BO_instance.active_f_dims}
+        file_name = "2023_11_20_VSBO_selected_variables_iteration{}.mat".format(iter_num)
+        savemat(file_name, data_VS)
     if (iter_num % 10 == 0):
         print(
             f"Epoch {iter_num:>3} "
