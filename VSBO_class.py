@@ -4,6 +4,8 @@ from rpy2.robjects.packages import importr
 from rpy2.robjects import pandas2ri
 from rpy2.robjects.conversion import localconverter
 
+from scipy.io import savemat
+
 #My simulator import
 import tensorflow as tf
 from TerrestrialClass import Terrestrial
@@ -432,7 +434,7 @@ class VSBO(BOtorch):
         return np.array(tmvtnorm.rtmvnorm(n=n_samp, mean=mu, sigma=cov, lower=lb, upper=ub, algorithm='gibbs', burn=100,
                                           thinning=5))
 
-    def data_update(self, method='CMAES_posterior', n_sampling=1):
+    def data_update(self, iter_num, method='CMAES_posterior', n_sampling=1):
         # self.lessiv_n_sampling = n_sampling
         # pdb.set_trace()
         new_x = torch.tensor([0 for i in range(self.X_dim)], dtype=dtype, device=device).reshape((1, self.X_dim))
@@ -506,3 +508,31 @@ class VSBO(BOtorch):
         Rate_obj = Rate_sumOftheLog_Obj[0].__float__()
         new_y = torch.tensor([[Rate_obj]], dtype=torch.double)
         self.X, self.Y = torch.cat((self.X, new_x)), torch.cat((self.Y, new_y))
+
+        # Monitoring the progress of best observed value so far
+        best_value = tf.expand_dims(tf.reduce_max(self.Y[self.data_size:, :], axis=0), axis=0)
+        if iter_num == 1:
+            self.best_rate_so_far = tf.zeros(best_value.shape, dtype='float64')
+        self.best_rate_so_far = tf.concat([self.best_rate_so_far, best_value], axis=0)
+
+        # BO Outputs
+        Thresholds = self.X[self.data_size:, :]
+        Obj = self.Y[self.data_size:, :]
+        Thresholds = Thresholds.numpy()
+        Thresholds = tf.convert_to_tensor(Thresholds)
+        Obj = Obj.numpy()
+        Obj = tf.convert_to_tensor(Obj)
+        best_observed_objective_value = tf.reduce_max(Obj, axis=0)
+        optimum_thresholds = tf.tile(tf.cast(Obj == best_observed_objective_value, "float64"), [1, 1]) * Thresholds
+        optimum_thresholds = tf.reduce_sum(optimum_thresholds, axis=0)
+        Full_tilts = optimum_thresholds
+
+        # Saving BO data for matlab
+        data_BO = {"Thresholds": Thresholds.numpy(),
+                   "Obj": Obj.numpy(),
+                   "best_observed_objective_value": best_observed_objective_value.numpy(),
+                   "optimum_thresholds": optimum_thresholds.numpy(),
+                   "best_rate_so_far": self.best_rate_so_far.numpy(),
+                   "Full_tilts": Full_tilts.numpy()}
+        file_name = "2023_11_20_VSBO_GUEs_iteration{}.mat".format(iter_num)
+        savemat(file_name, data_BO)
