@@ -66,7 +66,7 @@ class BOtorch(object):
 
             new_train_x = torch.from_numpy(BS_tilt[:, :, 0].numpy()).double()
 
-            # BS_tilt = self.tilts_vector  # This is for getting the SINR for the opt thresholds after finishing
+            BS_tilt = self.tilts_vector  # This is for getting the SINR for the opt thresholds after finishing
             BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
 
             BS_HPBW_v = self.HPBW_v_vector  # This is for getting the SINR for the opt thresholds after finishing

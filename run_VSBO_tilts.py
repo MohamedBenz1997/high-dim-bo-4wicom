@@ -35,7 +35,14 @@ total_budget = 400
 
 ###Initial simulator parameters
 data_size = 100
-tilts_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 0.0, tf.float32), axis=0),axis=2)
+# tilts_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 0.0, tf.float32), axis=0),axis=2)
+tilts_vector = tf.expand_dims(tf.constant([[
+    -10.7028, - 13.2502, - 10.8893, - 12.9726, - 11.8176, - 11.4146, - 10.0879, - 10.6533, - 12.6312, - 12.0264,
+    - 12.1142, - 12.4132, - 11.1537, - 10.8106, - 12.4998, - 11.4740, - 15.0189, - 11.0204, - 12.9443, - 12.8542,
+    - 12.7713, - 12.3419, - 11.4416, - 13.2092, - 11.1103, - 10.3184, - 12.7448, - 12.5280, - 13.7621, - 13.2310,
+    - 12.9288, - 10.5971, - 12.1113, - 13.5342, - 12.0637, - 12.9327, - 11.9668, - 14.3249, - 11.6192, - 12.7023,
+    - 12.5337, - 12.3194, - 11.2269, - 11.1509, - 14.1286, - 10.3987, - 12.8748, - 10.2173, - 11.7782, - 12.5399,
+    - 10.7587, - 10.1067, - 12.4050, - 12.6742, - 13.5555, - 11.6321, - 11.5568]]), axis=2)
 HPBW_v_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 10.0, 10.0, tf.float32), axis=0),axis=2)
 Ptx_thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 46.0, 46.0, tf.float32), axis=0),axis=2)
 obj_vector = torch.tensor([[-1.6746]], dtype=torch.double)
