@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Tue Dec 12 15:14:01 2023
 
@@ -6,8 +5,6 @@ Created on Tue Dec 12 15:14:01 2023
 
 This is the run script for BAxUS
 """
-
-
 import math
 from dataclasses import dataclass
 
@@ -27,7 +24,8 @@ from botorch.fit import fit_gpytorch_mll
 from botorch.generation import MaxPosteriorSampling
 from botorch.models import SingleTaskGP
 from botorch.optim import optimize_acqf
-from botorch.test_functions import Branin
+
+dtype = torch.double
 
 #My simulator import
 import tensorflow as tf
@@ -38,11 +36,6 @@ from plot_class import Plot
 SINR = SINR()
 config = Config()
 plot = Plot()
-
-dtype = torch.double
-
-
-
 
 def WiSe(x):
     """x is assumed to be in [-1, 1]^D"""
@@ -85,9 +78,6 @@ def WiSe(x):
     KPI = new_y
     return KPI
 
-
-dim = 57
-max_cholesky_size = float("inf")  # Always use Cholesky
 
 ## Maintain the BAxUS state
 ###################################################################
@@ -166,8 +156,8 @@ def update_state(state, Y_next):
 
 ## Create a BAxUS embedding
 ###################################################################
-## We now show how to create the BAxUS embedding. The essential idea is to assign input dimensions to target dimensions and to assign a sign $\in \pm 1$ to each input dimension, similar to the HeSBO embedding.
-## We create the embedding matrix that is used to project points from the target to the input space. The matrix is sparse, each column has precisely one non-zero entry that is either 1 or -1.
+# We now show how to create the BAxUS embedding. The essential idea is to assign input dimensions to target dimensions and to assign a sign $\in \pm 1$ to each input dimension, similar to the HeSBO embedding.
+# We create the embedding matrix that is used to project points from the target to the input space. The matrix is sparse, each column has precisely one non-zero entry that is either 1 or -1.
 
 def embedding_matrix(input_dim: int, target_dim: int) -> torch.Tensor:
     if (
@@ -203,7 +193,7 @@ embedding_matrix(10, 3)  # example for an embedding matrix
 
 ## Function to increase the embedding
 ###################################################################
-#Next, we write a helper function to increase the embedding and to bring observations to the increased target space.
+# Next, we write a helper function to increase the embedding and to bring observations to the increased target space.
 def increase_embedding_and_observations(
     S: torch.Tensor, X: torch.Tensor, n_new_bins: int
 ) -> torch.Tensor:
@@ -259,7 +249,7 @@ def increase_embedding_and_observations(
 
 
 ## Generate initial points
-## This generates an initial set of Sobol points that we use to start of the BO loop.
+# This generates an initial set of Sobol points that we use to start of the BO loop.
 def get_initial_points(n_pts, seed=0):
     dim = 57
     sobol = SobolEngine(dimension=dim, scramble=True, seed=seed)
@@ -337,8 +327,10 @@ def create_candidate(
 #BAxUS works on a fixed evaluation budget and shrinks the trust region until the minimal trust region size is reached (`state["restart_triggered"]` is set to `True`).
 #Then, BAxUS increases the target space and carries over the observations to the updated space.
 
-evaluation_budget = 1000
-n_init = 100
+evaluation_budget = 100
+n_init = 10
+dim = 57
+max_cholesky_size = float("inf")  # Always use Cholesky
 
 state = BaxusState(dim=dim, eval_budget=evaluation_budget - n_init)
 S = embedding_matrix(input_dim=state.dim, target_dim=state.d_init)
@@ -404,7 +396,7 @@ with botorch.settings.validate_input_scaling(False):
                 n_candidates=N_CANDIDATES,
                 num_restarts=NUM_RESTARTS,
                 raw_samples=RAW_SAMPLES,
-                acqf="ts",
+                acqf="ei",
             )
         X_next_input = X_next_target
         # X_next_input = X_next_target @ S
