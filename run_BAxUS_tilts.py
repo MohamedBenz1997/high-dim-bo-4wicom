@@ -96,7 +96,7 @@ class BaxusState:
     n_splits: int = float("nan")  # Note: post-initialized
     length: float = 0.8
     length_init: float = 0.8
-    length_min: float = 0.5**7
+    length_min: float = 0.2**7
     length_max: float = 1.6
     failure_counter: int = 0
     success_counter: int = 0
@@ -328,7 +328,7 @@ def create_candidate(
 #Then, BAxUS increases the target space and carries over the observations to the updated space.
 
 evaluation_budget = 100
-n_init = 10
+n_init = 100
 dim = 57
 max_cholesky_size = float("inf")  # Always use Cholesky
 
