@@ -34,12 +34,22 @@ from scipy.io import savemat
 def WiSe(x):
 
     dim = 57
-    lower_bound = -25.0
-    upper_bound = 0.0
+    lower_bound = -15.0
+    upper_bound = 45.0
     bounds = torch.cat((torch.zeros(1, dim) + lower_bound, torch.zeros(1, dim) + upper_bound))
     new_x = unnormalize(x, bounds)
     BS_tilt = tf.constant(new_x.numpy())
-    BS_tilt = tf.expand_dims(tf.expand_dims(BS_tilt, axis=0),axis=2)
+    BS_tilt = tf.expand_dims(tf.expand_dims(BS_tilt, axis=0), axis=2)
+
+    # #Specifiying tilts
+    # BS_tilt = tf.expand_dims(tf.constant([[
+    #     -13.8137, - 11.7931, - 11.8693,   28.4037,   33.7573, - 11.3660,   27.1188, - 12.9570, - 11.9227, - 12.7056,
+    #     39.7116, - 10.3652,   19.5977, - 14.4678, - 11.1715, - 11.9129,   17.1804,   30.2612,   29.0168, - 10.4313,
+    #     29.6224, - 12.9595, - 12.6948, - 12.9950,   21.5117, - 11.7778, - 11.4830, - 13.5818, - 12.6055,   32.8525,
+    #     - 12.9300,   26.7119, - 11.6611,   33.7439, - 11.4657, - 14.2299, - 12.5002,   35.8209, - 14.1224, - 12.6076,
+    #     27.4939, - 9.7702,   24.1159, - 10.9561, - 11.0675, - 12.0542, - 12.8950, - 12.7781, - 12.4218, - 10.9001,
+    #     - 12.0256, - 9.6647, - 13.1336,   39.8641, - 11.8871, - 12.5598, - 11.1506]]), axis=2)
+
     BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
 
     # Run simulator based on new candidates
@@ -64,7 +74,8 @@ def WiSe(x):
     sinr_TN_GUEs = SINR.sinr_TN(LSG_GUEs, P_Tx_TN)
 
     # BO objective
-    Rate_sumOftheLog_Obj, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN,alpha=0.0)
+    SINR_sumOftheLog_Obj, Rate_sumOftheLog_Obj, sinr_total_UAVs, sinr_total_GUEs = SINR.BO_Multi_Obj_Cooridor(sinr_TN_UAVs_Corridors, sinr_TN_GUEs, alpha=0.5)
+    Rate_sumOftheLog_Obj, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN,alpha=0.5)
     Rate_obj = Rate_sumOftheLog_Obj[0].__float__()
     new_y = torch.tensor([[Rate_obj]], dtype=torch.double)
 
@@ -185,6 +196,16 @@ Y_turbo = torch.tensor(
     [WiSe(x) for x in X_turbo], dtype=dtype
 ).unsqueeze(-1)
 
+## Save initial data-set
+# file_name = "2023_12_16_Corr_150m_2bydim_initial_dataset.pt"
+# torch.save({"X_turbo": X_turbo, "Y_turbo": Y_turbo}, file_name)
+
+## Load initial data-set
+#file_name = "2023_12_16_Corr_150m_2bydim_initial_dataset.pt"
+#loaded_data = torch.load(file_name)
+#X_turbo = loaded_data["X_turbo"]
+#Y_turbo = loaded_data["Y_turbo"]
+
 state = TurboState(dim, batch_size=batch_size)
 
 NUM_RESTARTS = 10
@@ -238,8 +259,8 @@ while not state.restart_triggered:  # Run until TuRBO converges
 
     #Un-normalize the candidates
     dim = 57
-    lower_bound = -25.0
-    upper_bound = 0.0
+    lower_bound = -15.0
+    upper_bound = 45.0
     bounds = torch.cat((torch.zeros(1, dim) + lower_bound, torch.zeros(1, dim) + upper_bound))
     Thresholds = unnormalize(X_turbo, bounds)
 
