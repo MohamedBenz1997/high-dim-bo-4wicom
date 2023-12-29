@@ -33,12 +33,14 @@ from scipy.io import savemat
 
 def WiSe(x):
 
-    dim = 57
-    lower_bound = -15.0
-    upper_bound = 45.0
-    bounds = torch.cat((torch.zeros(1, dim) + lower_bound, torch.zeros(1, dim) + upper_bound))
-    new_x = unnormalize(x, bounds)
-    BS_tilt = tf.constant(new_x.numpy())
+    # Obtaining tilts
+    x_tilts = x[0:57]
+    dim_tilts = 57
+    lower_bound_tilts = -15.0
+    upper_bound_tilts = 45.0
+    bounds_tilts = torch.cat((torch.zeros(1, dim_tilts) + lower_bound_tilts, torch.zeros(1, dim_tilts) + upper_bound_tilts))
+    new_x_tilts = unnormalize(x_tilts, bounds_tilts)
+    BS_tilt = tf.constant(new_x_tilts.numpy())
     BS_tilt = tf.expand_dims(tf.expand_dims(BS_tilt, axis=0), axis=2)
 
     # #Specifiying tilts
@@ -52,19 +54,38 @@ def WiSe(x):
 
     BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
 
+    # Obtaining vHPBW
+    x_vHPBW = x[57:]
+    dim_vHPBW = 57
+    lower_bound_vHPBW = 5.0
+    upper_bound_vHPBW = 40.0
+    bounds_vHPBW = torch.cat((torch.zeros(1, dim_vHPBW) + lower_bound_vHPBW, torch.zeros(1, dim_vHPBW) + upper_bound_vHPBW))
+    new_x_vHPBW = unnormalize(x_vHPBW, bounds_vHPBW)
+    BS_HPBW_v = tf.constant(new_x_vHPBW.numpy())
+    BS_HPBW_v = tf.expand_dims(tf.expand_dims(BS_HPBW_v, axis=0), axis=2)
+
+    # #Specifiying tilts
+    # BS_HPBW_v = tf.expand_dims(tf.constant([[
+    #     -14.8470, - 13.4243,    7.4896,    8.3783,   12.4242,   12.1912, - 10.1185, - 14.4888, - 14.9273, - 14.9706,
+    #     13.2545, - 14.9025,   15.1222, - 13.1998, - 14.8966, - 14.7850,   15.8751,   15.0329,    5.3124,   12.9737,
+    #     10.1356,   13.6932,   16.2333, - 14.8296,    0.9250, - 13.7361, - 4.1275, - 14.1719, - 14.6700,   14.2649,
+    #     - 13.0908,   13.9583,   13.1613,   14.4604, - 14.6686, - 14.9878, - 14.6371, - 11.9384, - 14.8977, - 13.3471,
+    #     - 13.0281, - 14.6113, - 14.9524, - 14.9475,   14.9813, - 13.8463,   15.2721, - 14.8567, - 14.7609, - 14.9244,
+    #     - 14.8238, - 14.9055, - 14.7492,   17.7670, - 13.0705, - 14.9241, - 14.9249]]), axis=2)
+
+    BS_HPBW_v = tf.tile(BS_HPBW_v, [2 * config.batch_num, 1, config.Nuser_drop])
+
     # Run simulator based on new candidates
     ########################################################
-    HPBW_v_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 30.0, 30.0, tf.float32), axis=0), axis=2)
     Ptx_thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 46.0, 46.0, tf.float32), axis=0),axis=2)
 
     # If power and tilts are not being optimized
     P_Tx_TN = tf.tile(Ptx_thresholds_vector, [2 * config.batch_num, 1, config.Nuser_drop])
-    BS_HPBW_v = tf.tile(HPBW_v_vector, [2 * config.batch_num, 1, config.Nuser_drop])
 
     data = Terrestrial()
     data.alpha_factor = 0.0  # LEO at 90deg
     data.BS_tilt = tf.constant(BS_tilt.numpy(), dtype=tf.float32)
-    data.BS_HPBW_v = BS_HPBW_v
+    data.BS_HPBW_v = tf.constant(BS_HPBW_v.numpy(), dtype=tf.float32)
     data.call()
 
     # Import of the UAVs and GUEs LSG and SINR data
@@ -82,8 +103,8 @@ def WiSe(x):
     KPI = new_y
     return KPI
 
-
-dim = 57
+# TurBO initial paramaters
+dim = 114
 batch_size = 4
 n_init = 2 * dim
 max_cholesky_size = float("inf")  # Always use Cholesky
@@ -266,11 +287,20 @@ while not state.restart_triggered:  # Run until TuRBO converges
     Y_turbo = torch.cat((Y_turbo, Y_next), dim=0)
 
     #Un-normalize the candidates
-    dim = 57
-    lower_bound = -15.0
-    upper_bound = 45.0
-    bounds = torch.cat((torch.zeros(1, dim) + lower_bound, torch.zeros(1, dim) + upper_bound))
-    Thresholds = unnormalize(X_turbo, bounds)
+    X_turbo_tilts = X_turbo[:,0:57]
+    dim_tilts = 57
+    lower_bound_tilts = -15.0
+    upper_bound_tilts = 45.0
+    bounds_tilts = torch.cat((torch.zeros(1, dim_tilts) + lower_bound_tilts, torch.zeros(1, dim_tilts) + upper_bound_tilts))
+    Thresholds_tilts = unnormalize(X_turbo_tilts, bounds_tilts)
+    X_turbo_vHPBW = X_turbo[:,57:]
+    dim_vHPBW = 57
+    lower_bound_vHPBW = 5.0
+    upper_bound_vHPBW = 40.0
+    bounds_vHPBW = torch.cat((torch.zeros(1, dim_vHPBW) + lower_bound_vHPBW, torch.zeros(1, dim_vHPBW) + upper_bound_vHPBW))
+    Thresholds_vHPBW = unnormalize(X_turbo_vHPBW, bounds_vHPBW)
+
+    Thresholds = torch.cat((Thresholds_tilts, Thresholds_vHPBW), dim=1)
 
     #BO outputs
     Obj = Y_turbo
@@ -281,7 +311,8 @@ while not state.restart_triggered:  # Run until TuRBO converges
     best_observed_objective_value = tf.reduce_max(Obj, axis=0)
     optimum_thresholds = tf.tile(tf.cast(Obj == best_observed_objective_value, "float64"), [1, 1]) * Thresholds
     optimum_thresholds = tf.reduce_sum(optimum_thresholds, axis=0)
-    Full_tilts = optimum_thresholds
+    Full_tilts = optimum_thresholds[0:57]
+    Full_vHPBW = optimum_thresholds[57:]
 
     if i == 0:
         best_rate_so_far = tf.zeros(best_observed_objective_value.shape, dtype='float64')
@@ -292,8 +323,9 @@ while not state.restart_triggered:  # Run until TuRBO converges
                "Obj": Obj.numpy(),
                "best_observed_objective_value": best_observed_objective_value.numpy(),
                "best_rate_so_far": best_rate_so_far.numpy(),
-               "Full_tilts": Full_tilts.numpy()}
-    file_name = "2023_12_14_TuRBO_GUEs_tilts_iteration{}.mat".format(i)
+               "Full_tilts": Full_tilts.numpy(),
+               "Full_vHPBW": Full_vHPBW.numpy(),}
+    file_name = "2023_12_30_TuRBO_Corr_150m_tilts_vHPBW_iteration{}.mat".format(i)
     savemat(file_name, data_BO)
 
     #Increment the counter
