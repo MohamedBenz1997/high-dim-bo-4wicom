@@ -863,6 +863,6 @@ class HypervolumeTrustRegion(TrustRegion):
                 new_hv = partitioning.compute_hypervolume()
 
                 if new_hv > (1 + self.tr_hparams.eps) * self.hv:
-                    print(f"SUCCESS: hv ratio: {new_hv/self.hv}")
+                    # print(f"SUCCESS: hv ratio: {new_hv/self.hv}")
                     return True
         return False

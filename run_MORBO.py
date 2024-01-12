@@ -419,8 +419,13 @@ def run_one_replication(
         Obj_WiSe = Obj_WiSe.numpy()
         Obj_WiSe = tf.convert_to_tensor(Obj_WiSe)
 
+        if counter_WiSE == 0:
+            best_value_all = tf.zeros(Obj_WiSe.shape, dtype='float64')
+        best_value_all = tf.concat([best_value_all, Obj_WiSe], axis=0)
+
         data_BO_WiSe = {"Thresholds": Thresholds_WiSe.numpy(),
-                   "Obj": Obj_WiSe.numpy()}
+                   "Obj": Obj_WiSe.numpy(),
+                    "Obj_all":best_value_all.numpy()}
         file_name = "2024_01_11_MORBO_GUEs_UAVs_tilts_iteration{}.mat".format(counter_WiSE)
         savemat(file_name, data_BO_WiSe)
 
