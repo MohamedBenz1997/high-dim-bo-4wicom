@@ -601,7 +601,7 @@ class SINR(Config):
 
         return Rate_sumOftheLog_Obj, Rate_GUEs, Rate_UAVs
 
-    def BO_Obj_Rates_and_Outage(self, LSG, LSG_UAVs_Corridors,  P_Tx_TN, alpha):
+    def BO_Obj_Rates_and_Outage(self, LSG, LSG_UAVs_Corridors,  P_Tx_TN, D, D_2d, alpha):
 
         #This is for GUEs
         if self.N==1:
@@ -614,6 +614,14 @@ class SINR(Config):
 
         #Finding the BSs load
         indexing_GUEs = tf.cast(-LSG == LSL_min_TN_GUEs, "float32")
+
+        # #Finding served BS distances
+        # D_GUEs = D[:, 0:57, 0:tf.shape(indexing_GUEs)[-1]] * indexing_GUEs
+        # D_2d_GUEs = D_2d[:, 0:57, 0:tf.shape(indexing_GUEs)[-1]] * indexing_GUEs
+        # D_served = tf.reduce_sum(D_GUEs,axis=1)
+        # D_served = tf.reshape(D_served, [-1])
+        # D_2d_served = tf.reduce_sum(D_2d_GUEs, axis=1)
+        # D_2d_served = tf.reshape(D_2d_served, [-1])
 
         #This is to make sure that if user has same LSG to all 3 sectors, we choose one of the sectors randomly
         if self.N==1:

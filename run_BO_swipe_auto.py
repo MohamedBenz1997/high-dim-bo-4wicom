@@ -329,11 +329,11 @@ for iteration, i in enumerate(tqdm(BS_id)):
     # # savemat("2023_04_08_SINR_Cell_ID_AlphaHalf_Mix.mat", d)
     # savemat("2023_04_25_Alpha0_GUEs_Cell_ID.mat", d)
 
-    #d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
-          #"SINR_GUEs": 10 * np.log10(sinr_total_GUEs.numpy()),
-          #"Rate_UAVs": Rate_UAVs.numpy(),
-          #"Rate_GUEs": Rate_GUEs.numpy()}
-    #savemat("2023_09_28_IterativeBO_OneTier_GUEs_iteration{}.mat", d)
+    # d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
+    #       "SINR_GUEs": 10 * np.log10(sinr_total_GUEs.numpy()),
+    #       "Rate_UAVs": Rate_UAVs.numpy(),
+    #       "Rate_GUEs": Rate_GUEs.numpy()}
+    # savemat("2023_09_28_IterativeBO_OneTier_GUEs_iteration{}.mat", d)
     #
     # d = {"Cell_id_GUEs":BSs_id_GUEs.numpy(),
     #       "GUEs_x": Xuser_GUEs_x.numpy(),

@@ -46,7 +46,7 @@ class BOtorch(object):
 
         for j in range(self.data_size):
             ##Setting Random tilts for all BSs creating a data set
-            BS_tilt = tf.random.uniform(self.tilts_vector.shape, -20, 0)
+            BS_tilt = tf.random.uniform(self.tilts_vector.shape, -20, 45)
             ########################################################
             ##Different sets of samples in the initial data-set
             ########################################################
@@ -68,7 +68,7 @@ class BOtorch(object):
 
             new_train_x = torch.from_numpy(BS_tilt[:, :, 0].numpy()).double()
 
-            BS_tilt = self.tilts_vector  # This is for getting the SINR for the opt thresholds after finishing
+            # BS_tilt = self.tilts_vector  # This is for getting the SINR for the opt thresholds after finishing
             BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
 
             BS_HPBW_v = self.HPBW_v_vector  # This is for getting the SINR for the opt thresholds after finishing
@@ -93,10 +93,10 @@ class BOtorch(object):
 
             # BO objective: Sum of log of the RSS
             SINR_sumOftheLog_Obj, Rate_sumOftheLog_Obj, sinr_total_UAVs, sinr_total_GUEs = SINR.BO_Multi_Obj_Cooridor(
-                sinr_TN_UAVs_Corridors, sinr_TN_GUEs, alpha=0.0)
+                sinr_TN_UAVs_Corridors, sinr_TN_GUEs, alpha=0.5)
             Rate_sumOftheLog_Obj, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors,
                                                                                       P_Tx_TN,
-                                                                                      alpha=0.0)
+                                                                                      alpha=0.5)
             Rate_obj = Rate_sumOftheLog_Obj[0].__float__()
             new_obj = torch.tensor([[Rate_obj]], dtype=torch.double)
 
@@ -504,7 +504,7 @@ class VSBO(BOtorch):
 
         # BO objective
         Rate_sumOftheLog_Obj, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN,
-                                                                                  alpha=0.0)
+                                                                                  alpha=0.5)
         Rate_obj = Rate_sumOftheLog_Obj[0].__float__()
         new_y = torch.tensor([[Rate_obj]], dtype=torch.double)
         self.X, self.Y = torch.cat((self.X, new_x)), torch.cat((self.Y, new_y))
@@ -534,5 +534,5 @@ class VSBO(BOtorch):
                    "optimum_thresholds": optimum_thresholds.numpy(),
                    "best_rate_so_far": self.best_rate_so_far.numpy(),
                    "Full_tilts": Full_tilts.numpy()}
-        file_name = "2023_11_20_VSBO_GUEs_iteration{}.mat".format(iter_num)
+        file_name = "2024_01_05_VSBO_Corr_150m_iteration{}.mat".format(iter_num)
         savemat(file_name, data_BO)

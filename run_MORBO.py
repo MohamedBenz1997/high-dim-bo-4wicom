@@ -51,13 +51,13 @@ def WiSe(x):
     BS_tilt = tf.expand_dims(tf.expand_dims(BS_tilt, axis=0), axis=2)
 
     # #Specifiying tilts
-    # BS_tilt = tf.expand_dims(tf.constant([[
-    #     -14.8470, - 13.4243,    7.4896,    8.3783,   12.4242,   12.1912, - 10.1185, - 14.4888, - 14.9273, - 14.9706,
-    #     13.2545, - 14.9025,   15.1222, - 13.1998, - 14.8966, - 14.7850,   15.8751,   15.0329,    5.3124,   12.9737,
-    #     10.1356,   13.6932,   16.2333, - 14.8296,    0.9250, - 13.7361, - 4.1275, - 14.1719, - 14.6700,   14.2649,
-    #     - 13.0908,   13.9583,   13.1613,   14.4604, - 14.6686, - 14.9878, - 14.6371, - 11.9384, - 14.8977, - 13.3471,
-    #     - 13.0281, - 14.6113, - 14.9524, - 14.9475,   14.9813, - 13.8463,   15.2721, - 14.8567, - 14.7609, - 14.9244,
-    #     - 14.8238, - 14.9055, - 14.7492,   17.7670, - 13.0705, - 14.9241, - 14.9249]]), axis=2)
+    BS_tilt = tf.expand_dims(tf.constant([[
+        -13.9327, - 13.2903, - 12.8647,   10.5337,    9.9584,   12.8540 ,- 13.7302, - 12.0697 ,- 12.2952 ,- 12.9120,
+        11.3224, - 13.4506,   12.7093, - 12.6343, - 12.1007 ,- 12.9844,   11.3501,   12.0331,   11.8313, - 12.1021,
+        - 13.6658,   10.4538,   13.8567, - 12.9336, - 13.0059, - 12.8360, - 12.8065, - 12.2845, - 13.9383, - 13.4531,
+        - 13.0222,   12.4988, - 14.2656,   12.3700, - 12.1800, - 13.2468, - 13.7995, - 13.0525, - 12.7080, - 12.7230,
+        - 12.7104, - 13.1767, - 11.7174, - 13.1188, - 12.4295, - 13.1245,   14.4940, - 13.1295, - 13.9200, - 12.7240,
+        - 13.2607, - 11.5826, - 12.8363,   13.1386, - 12.6877, - 13.2881, - 11.5168]]), axis=2)*0.0-12.0
 
     BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
 
@@ -76,6 +76,10 @@ def WiSe(x):
     data.BS_HPBW_v = BS_HPBW_v
     data.call()
 
+    # Import distances
+    D = data.D
+    D_2d = data.D_2d
+
     # Import of the UAVs and GUEs LSG and SINR data
     LSG_UAVs_Corridors = data.LSG_UAVs_Corridors
     LSG_GUEs = data.LSG_GUEs
@@ -83,9 +87,9 @@ def WiSe(x):
     sinr_TN_GUEs = SINR.sinr_TN(LSG_GUEs, P_Tx_TN)
 
     # BO objective
-    # SINR_sumOftheLog_Obj, Rate_sumOftheLog_Obj, sinr_total_UAVs, sinr_total_GUEs = SINR.BO_Multi_Obj_Cooridor(sinr_TN_UAVs_Corridors, sinr_TN_GUEs, alpha=0.5)
-    Rate_sumOftheLog_Obj_GUEs, _, _ = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN,alpha=0.0)
-    Rate_sumOftheLog_Obj_UAVs, _, _ = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN,alpha=1.0)
+    # SINR_sumOftheLog_Obj, Rate_sumOftheLog_Obj, sinr_total_UAVs, sinr_total_GUEs = SINR.BO_Multi_Obj_Cooridor(sinr_TN_UAVs_Corridors, sinr_TN_GUEs, alpha=0.0)
+    Rate_sumOftheLog_Obj_GUEs, _, _ = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN, D, D_2d, alpha=0.0)
+    Rate_sumOftheLog_Obj_UAVs, _, _ = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN, D, D_2d, alpha=1.0)
     Rate_obj_GUEs = Rate_sumOftheLog_Obj_GUEs[0].__float__()
     Rate_obj_UAVs = Rate_sumOftheLog_Obj_UAVs[0].__float__()
     new_y = torch.tensor([[Rate_obj_GUEs,Rate_obj_UAVs]], dtype=torch.double)
@@ -472,3 +476,8 @@ run_one_replication(
         n_initial_points=5,
         max_reference_point=[-15.0,-15.0])
 
+# d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
+#      "SINR_GUEs": 10 * np.log10(sinr_total_GUEs.numpy()),
+#      "Rate_UAVs": Rate_UAVs.numpy(),
+#      "Rate_GUEs": Rate_GUEs.numpy()}
+# savemat("2023_09_28_IterativeBO_OneTier_GUEs_iteration{}.mat", d)

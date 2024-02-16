@@ -22,23 +22,23 @@ def makedirs(dirname):
 
 
 ### Initial parameters
-N_FS = 10
+N_FS = 20
 acq_optim_method = 'LBFGS'
 ### use CMAES to sample unimportant variables
 less_important_sampling = args.sampling
 init_samples = 5
 object_dim = 57
 lower_bound = -20.0
-upper_bound = 0.0
+upper_bound = 45.0
 bounds = torch.cat((torch.zeros(1, object_dim) + lower_bound, torch.zeros(1, object_dim) + upper_bound))
 total_budget = 2000
 
 ###Initial simulator parameters
-data_size = 200
+data_size = 2*57
 tilts_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 0.0, tf.float32), axis=0),axis=2)
 HPBW_v_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 10.0, 10.0, tf.float32), axis=0),axis=2)
 Ptx_thresholds_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 46.0, 46.0, tf.float32), axis=0),axis=2)
-obj_vector = torch.tensor([[-1.6746]], dtype=torch.double)
+obj_vector = torch.tensor([[-4.6746]], dtype=torch.double)
 
 ### Run VS-BO
 BO_instance = VSBO(N_FS,object_dim, bounds, data_size, tilts_vector, HPBW_v_vector, Ptx_thresholds_vector, obj_vector)
@@ -95,7 +95,7 @@ while (iter_num < total_budget):
         print(BO_instance.active_f_dims)
         data_VS = {"variables_list": BO_instance.active_f_list.numpy(),
                    "active_variables": BO_instance.active_f_dims}
-        file_name = "2023_11_20_VSBO_selected_variables_iteration{}.mat".format(iter_num)
+        file_name = "2024_01_05_VSBO_Corr_150m_selected_variables_iteration{}.mat".format(iter_num)
         savemat(file_name, data_VS)
     if (iter_num % 10 == 0):
         print(

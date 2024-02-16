@@ -223,8 +223,8 @@ class Terrestrial(Config):
         # self.AP_assign_user_Baseline = AP_assign_user_Baseline
         # self.assigned_batch_index_Baseline = assigned_batch_index_Baseline
         # self.D_2d_assign_Baseline = D_2d_assign_Baseline
-        # self.D_2d=D_2d
-        # self.D = D
+        self.D_2d=D_2d
+        self.D = D
         # self.Xuser = Xuser
         # self.Elv_thetha_deg=Elv_thetha_deg
         # self.Xap = Xap

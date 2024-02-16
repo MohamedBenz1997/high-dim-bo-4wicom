@@ -13,7 +13,7 @@ class Config():
     def __init__(self):
 
         # ------------ Define the general paramters that will be used in the upcoming functions.
-        self.batch_num = 2   #Number of iterations to run
+        self.batch_num = 200   #Number of iterations to run
         self.beta_open_loop = 1
         self.Zuser = 1.5            #Hight of user in m
         self.Zap = 25.0             #Hight of BSs in m
