@@ -51,13 +51,13 @@ def WiSe(x):
     BS_tilt = tf.expand_dims(tf.expand_dims(BS_tilt, axis=0), axis=2)
 
     # #Specifiying tilts
-    BS_tilt = tf.expand_dims(tf.constant([[
-        -13.9327, - 13.2903, - 12.8647,   10.5337,    9.9584,   12.8540 ,- 13.7302, - 12.0697 ,- 12.2952 ,- 12.9120,
-        11.3224, - 13.4506,   12.7093, - 12.6343, - 12.1007 ,- 12.9844,   11.3501,   12.0331,   11.8313, - 12.1021,
-        - 13.6658,   10.4538,   13.8567, - 12.9336, - 13.0059, - 12.8360, - 12.8065, - 12.2845, - 13.9383, - 13.4531,
-        - 13.0222,   12.4988, - 14.2656,   12.3700, - 12.1800, - 13.2468, - 13.7995, - 13.0525, - 12.7080, - 12.7230,
-        - 12.7104, - 13.1767, - 11.7174, - 13.1188, - 12.4295, - 13.1245,   14.4940, - 13.1295, - 13.9200, - 12.7240,
-        - 13.2607, - 11.5826, - 12.8363,   13.1386, - 12.6877, - 13.2881, - 11.5168]]), axis=2)*0.0-12.0
+    # BS_tilt = tf.expand_dims(tf.constant([[
+    #     -13.8137, - 11.7931, - 11.8693,   28.4037,   33.7573, - 11.3660,   27.1188, - 12.9570, - 11.9227, - 12.7056,
+    #     39.7116, - 10.3652,   19.5977, - 14.4678, - 11.1715, - 11.9129,   17.1804,   30.2612,   29.0168, - 10.4313,
+    #     29.6224, - 12.9595, - 12.6948, - 12.9950,   21.5117, - 11.7778, - 11.4830, - 13.5818, - 12.6055,   32.8525,
+    #     - 12.9300,   26.7119, - 11.6611,   33.7439, - 11.4657, - 14.2299, - 12.5002,   35.8209, - 14.1224, - 12.6076,
+    #     27.4939, - 9.7702,   24.1159, - 10.9561, - 11.0675, - 12.0542, - 12.8950, - 12.7781, - 12.4218, - 10.9001,
+    #     - 12.0256, - 9.6647, - 13.1336,   39.8641, - 11.8871, - 12.5598, - 11.1506]]), axis=2)*0.0-12.0
 
     BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
 
@@ -88,11 +88,10 @@ def WiSe(x):
 
     # BO objective
     # SINR_sumOftheLog_Obj, Rate_sumOftheLog_Obj, sinr_total_UAVs, sinr_total_GUEs = SINR.BO_Multi_Obj_Cooridor(sinr_TN_UAVs_Corridors, sinr_TN_GUEs, alpha=0.0)
-    Rate_sumOftheLog_Obj_GUEs, _, _ = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN, D, D_2d, alpha=0.0)
-    Rate_sumOftheLog_Obj_UAVs, _, _ = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN, D, D_2d, alpha=1.0)
+    Rate_sumOftheLog_Obj_GUEs, Coverage_ratio, _, _ = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN, D, D_2d, alpha=0.5)
     Rate_obj_GUEs = Rate_sumOftheLog_Obj_GUEs[0].__float__()
-    Rate_obj_UAVs = Rate_sumOftheLog_Obj_UAVs[0].__float__()
-    new_y = torch.tensor([[Rate_obj_GUEs,Rate_obj_UAVs]], dtype=torch.double)
+    Coverage_ratio = Coverage_ratio.__float__()
+    new_y = torch.tensor([[Rate_obj_GUEs,Coverage_ratio]], dtype=torch.double)
 
     KPI = new_y
     return KPI
@@ -430,7 +429,7 @@ def run_one_replication(
         data_BO_WiSe = {"Thresholds": Thresholds_WiSe.numpy(),
                    "Obj": Obj_WiSe.numpy(),
                     "Obj_all":best_value_all.numpy()}
-        file_name = "2024_01_11_MORBO_GUEs_UAVs_tilts_iteration{}.mat".format(counter_WiSE)
+        file_name = "2024_02_17_MORBO_corr_150m_tilts_RateandPc_iteration{}.mat".format(counter_WiSE)
         savemat(file_name, data_BO_WiSe)
 
         # Increment the counter
@@ -467,14 +466,14 @@ def run_one_replication(
 
 
 run_one_replication(
-        seed=123456,
+        seed=1234567,
         label="morbo",
-        max_evals=2000,
+        max_evals=3000,
         evalfn="WiSE",
         batch_size=1,
         dim=57,
-        n_initial_points=5,
-        max_reference_point=[-15.0,-15.0])
+        n_initial_points=5*57,
+        max_reference_point=[-5.0,0.0])
 
 # d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
 #      "SINR_GUEs": 10 * np.log10(sinr_total_GUEs.numpy()),

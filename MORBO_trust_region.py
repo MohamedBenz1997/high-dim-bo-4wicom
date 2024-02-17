@@ -119,14 +119,14 @@ class TurboHParams:
     length_max: float = 1.6
     success_streak: int = 10_000
     failure_streak: Optional[int] = None
-    n_trust_regions: int = 5
+    n_trust_regions: int = 10
     batch_size: int = 100
     eps: float = 1e-3
     use_ard: bool = True
     trim_trace: bool = True
     verbose: bool = False
     max_tr_size: int = 2000
-    min_tr_size: int = 4
+    min_tr_size: int = 250
     qmc: bool = True
     sample_subset_d: bool = True
     track_history: bool = True

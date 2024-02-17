@@ -727,16 +727,14 @@ class SINR(Config):
         Rate_sumOftheLog_Obj1 = (alpha) * (Rate_sumOftheLog_Obj_UAVs) + (1 - alpha) * (Rate_sumOftheLog_Obj_GUEs)
 
         #Outage term calculations (Jeffrey's paper)
-        #GUEs_Outage = tf.tile(tf.cast(sinr_TN_GUEs < 0.31622776, "float32"), [1, 57, 1])*indexing_GUEs
-        #UAVs_Outage = tf.tile(tf.cast(sinr_TN_UAVs < 0.31622776, "float32"), [1, 57, 1]) * indexing_UAVs
-        #Users_Outage_perBS = tf.reduce_sum(GUEs_Outage, axis=2)  + tf.reduce_sum(UAVs_Outage, axis=2)
-        #Outage_ratio = Users_Outage_perBS/(BS_load_combined[:,:,0]+1)
-        #Outage_ratio = tf.reduce_sum(tf.reduce_mean(Outage_ratio, axis=0),axis=0)
-        #Avg_Users_Outage_perBS = tf.math.ceil(tf.reduce_mean(Users_Outage_perBS,axis=0))
-        Outage_ratio = 0.0
+        GUEs_Outage = tf.tile(tf.cast(sinr_TN_GUEs < 0.31622776, "float32"), [1, 57, 1])*indexing_GUEs
+        UAVs_Outage = tf.tile(tf.cast(sinr_TN_UAVs < 0.31622776, "float32"), [1, 57, 1]) * indexing_UAVs
+        Users_Outage_perBS = tf.reduce_sum(GUEs_Outage, axis=2)  + tf.reduce_sum(UAVs_Outage, axis=2)
+        Users_Outage = tf.reduce_sum(tf.reduce_mean(Users_Outage_perBS, axis=0),axis=0)
+        Outage_ratio = Users_Outage/855.0
+        Coverage_ratio = 1-Outage_ratio
 
         #Final Obj of sum log rates
-        Rate_sumOftheLog_Obj = Rate_sumOftheLog_Obj1 - 0*Outage_ratio
-        Rate_sumOftheLog_Obj = Rate_sumOftheLog_Obj/100.0
+        Rate_sumOftheLog_Obj = Rate_sumOftheLog_Obj1/100.0
         
-        return Rate_sumOftheLog_Obj, Rate_GUEs, Rate_UAVs
+        return Rate_sumOftheLog_Obj, Coverage_ratio, Rate_GUEs, Rate_UAVs
