@@ -44,7 +44,7 @@ def WiSe(x):
 
     dim = 57
     lower_bound_WiSe = -15.0
-    upper_bound_WiSe = 45.0
+    upper_bound_WiSe = 20.0
     bounds_WiSe = torch.cat((torch.zeros(1, dim) + lower_bound_WiSe, torch.zeros(1, dim) + upper_bound_WiSe))
     new_x = unnormalize(x, bounds_WiSe)
     BS_tilt = tf.constant(new_x.numpy())
@@ -52,12 +52,12 @@ def WiSe(x):
 
     # #Specifiying tilts
     # BS_tilt = tf.expand_dims(tf.constant([[
-    #     -13.8137, - 11.7931, - 11.8693,   28.4037,   33.7573, - 11.3660,   27.1188, - 12.9570, - 11.9227, - 12.7056,
-    #     39.7116, - 10.3652,   19.5977, - 14.4678, - 11.1715, - 11.9129,   17.1804,   30.2612,   29.0168, - 10.4313,
-    #     29.6224, - 12.9595, - 12.6948, - 12.9950,   21.5117, - 11.7778, - 11.4830, - 13.5818, - 12.6055,   32.8525,
-    #     - 12.9300,   26.7119, - 11.6611,   33.7439, - 11.4657, - 14.2299, - 12.5002,   35.8209, - 14.1224, - 12.6076,
-    #     27.4939, - 9.7702,   24.1159, - 10.9561, - 11.0675, - 12.0542, - 12.8950, - 12.7781, - 12.4218, - 10.9001,
-    #     - 12.0256, - 9.6647, - 13.1336,   39.8641, - 11.8871, - 12.5598, - 11.1506]]), axis=2)*0.0-12.0
+    #     -13.9327, - 13.2903, - 12.8647,   10.5337,    9.9584,   12.8540, - 13.7302, - 12.0697, - 12.2952, - 12.9120,
+    #     11.3224, - 13.4506,   12.7093, - 12.6343, - 12.1007, - 12.9844,   11.3501,   12.0331,   11.8313, - 12.1021,
+    #     - 13.6658,   10.4538,   13.8567, - 12.9336, - 13.0059, - 12.8360, - 12.8065, - 12.2845, - 13.9383, - 13.4531,
+    #     - 13.0222,   12.4988, - 14.2656,   12.3700, - 12.1800, - 13.2468, - 13.7995, - 13.0525, - 12.7080, - 12.7230,
+    #     - 12.7104, - 13.1767, - 11.7174, - 13.1188, - 12.4295, - 13.1245,   14.4940, - 13.1295, - 13.9200, - 12.7240,
+    #     - 13.2607, - 11.5826, - 12.8363,   13.1386, - 12.6877, - 13.2881, - 11.5168]]), axis=2)
 
     BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
 
@@ -88,10 +88,13 @@ def WiSe(x):
 
     # BO objective
     # SINR_sumOftheLog_Obj, Rate_sumOftheLog_Obj, sinr_total_UAVs, sinr_total_GUEs = SINR.BO_Multi_Obj_Cooridor(sinr_TN_UAVs_Corridors, sinr_TN_GUEs, alpha=0.0)
-    Rate_sumOftheLog_Obj_GUEs, Coverage_ratio, _, _ = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN, D, D_2d, alpha=0.5)
+    # Rate_sumOftheLog_Obj_GUEs, Coverage_ratio, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN, D, D_2d, alpha=0.0)
+    Rate_sumOftheLog_Obj_UAVs, Coverage_ratio, _, _ = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN, D, D_2d, alpha=1.0)
+    Rate_sumOftheLog_Obj_GUEs, Coverage_ratio, _, _ = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN, D, D_2d, alpha=0.0)
     Rate_obj_GUEs = Rate_sumOftheLog_Obj_GUEs[0].__float__()
+    Rate_obj_UAVs = Rate_sumOftheLog_Obj_UAVs[0].__float__()
     Coverage_ratio = Coverage_ratio.__float__()
-    new_y = torch.tensor([[Rate_obj_GUEs,Coverage_ratio]], dtype=torch.double)
+    new_y = torch.tensor([[Rate_obj_GUEs,Rate_obj_UAVs]], dtype=torch.double)
 
     KPI = new_y
     return KPI
@@ -242,7 +245,55 @@ def run_one_replication(
     # Create initial points
     n_points = min(n_initial_points, max_evals - trbo_state.n_evals)
     sobol = SobolEngine(dimension=dim, scramble=True, seed=seed)
-    X_init = sobol.draw(n=n_points).to(dtype=dtype)
+    # X_init = sobol.draw(n=n_points).to(dtype=dtype)
+
+    ## Bias initialization of MORBO based on TuRBO best observed for \lambda=0.5, 0, and 1
+    def bias_initialization(num_samples, feature_dim):
+
+        BS_tilt_tf_GUEs = tf.constant([[
+            -14.2892, - 13.3303, - 13.8357,   10.7650,    7.9629,    8.9450, - 11.6216, - 13.5172, - 11.8110, - 11.6466,
+            - 14.5059, - 13.6779, - 12.7726, - 13.8389, - 11.6859, - 12.6570, - 12.7154, - 14.1510,    7.0658, - 10.3518,
+            - 9.3582, - 13.3084, - 12.9983, - 14.5288, - 14.4601, - 12.7762, - 12.9617, - 13.5321, - 13.6170, - 13.4990,
+            - 13.3583, - 13.6499, - 13.0595, - 12.4591, - 12.2421, - 11.1918, - 12.3228, - 11.3664, - 13.9558, - 11.9876,
+            - 12.4522, - 12.4918, - 11.3783, - 14.2981, - 12.8244, - 13.6442, - 14.6585, - 13.6940, - 13.0231, - 11.1856,
+            - 12.9481, - 11.1927, - 13.4301, - 12.4440, - 12.4617,    7.1116, - 13.5773]])
+        BS_tilt_torch_GUEs = torch.tensor(BS_tilt_tf_GUEs.numpy(), dtype=torch.float64)
+
+        BS_tilt_tf_UAVs = tf.constant([[
+            -13.4910, - 14.3924, - 13.4719, 9.6376, 11.7109, 11.6339, 11.4240, 13.8082, - 9.5150, - 14.3014,
+            13.0297, - 11.2548, 14.3674, 13.0484, - 10.5345, - 9.7556, 13.8271, 12.5596, - 9.2227, - 12.9586,
+            11.4705, 14.2217, 12.4362, - 10.1060, - 9.8232, - 13.0684, - 12.5620, - 12.2552, - 13.7850, 13.4906,
+            - 13.3329, - 11.3929, - 12.3790, 10.0597, 12.9263, - 10.4925, - 10.7433, - 11.1133, - 14.9433, 14.4689,
+            - 14.2804, - 10.3791, - 12.6751, - 9.2092, 14.5388, - 10.0850, 13.5035, - 12.6803, 11.0223, 14.9165,
+            - 12.6413, 12.9107, - 14.3168, 14.6330, 10.2188, 10.0585, 13.9559]])
+        BS_tilt_torch_UAVs = torch.tensor(BS_tilt_tf_UAVs.numpy(), dtype=torch.float64)
+
+        BS_tilt_tf_both = tf.constant([[
+            -13.9327, - 13.2903, - 12.8647, 10.5337, 9.9584, 12.8540, - 13.7302, - 12.0697, - 12.2952, - 12.9120,
+            11.3224, - 13.4506, 12.7093, - 12.6343, - 12.1007, - 12.9844, 11.3501, 12.0331, 11.8313, - 12.1021,
+            - 13.6658, 10.4538, 13.8567, - 12.9336, - 13.0059, - 12.8360, - 12.8065, - 12.2845, - 13.9383, - 13.4531,
+            - 13.0222, 12.4988, - 14.2656, 12.3700, - 12.1800, - 13.2468, - 13.7995, - 13.0525, - 12.7080, - 12.7230,
+            - 12.7104, - 13.1767, - 11.7174, - 13.1188, - 12.4295, - 13.1245, 14.4940, - 13.1295, - 13.9200, - 12.7240,
+            - 13.2607, - 11.5826, - 12.8363, 13.1386, - 12.6877, - 13.2881, - 11.5168]])
+
+        BS_tilt_torch_both = torch.tensor(BS_tilt_tf_both.numpy(), dtype=torch.float64)
+
+        # Step 2: Generate X_init based on BS_tilt with random +/- 2 adjustments
+        adjustments = (torch.rand((num_samples, feature_dim)) * 4) - 2  # Generate random values in [-2, 2]
+        adjustments2 = (torch.rand((num_samples+150, feature_dim)) * 4) - 2  # Generate random values in [-2, 2]
+        X_init_GUEs = BS_tilt_torch_GUEs + adjustments
+        X_init_UAVs = BS_tilt_torch_UAVs + adjustments
+        X_init_both = BS_tilt_torch_both + adjustments2
+        X_init = torch.cat((X_init_GUEs, X_init_UAVs, X_init_both), dim=0)
+
+        # Step 3: Normalize the values from [-15, 20] to [0, 1]
+        old_min, old_max = -15, 20
+        new_min, new_max = 0, 1
+        X_init = ((X_init - old_min) / (old_max - old_min)) * (new_max - new_min) + new_min
+
+        return X_init
+
+    X_init = bias_initialization(num_samples=50, feature_dim=57)
 
     Y_init = torch.stack(
         [torch.tensor(WiSe(x), dtype=dtype) for x in X_init]
@@ -412,7 +463,7 @@ def run_one_replication(
         }
         #Un-normalize the candidates
         lower_bound_WiSe = -15.0
-        upper_bound_WiSe = 45.0
+        upper_bound_WiSe = 20.0
         bounds_WiSe = torch.cat((torch.zeros(1, dim) + lower_bound_WiSe, torch.zeros(1, dim) + upper_bound_WiSe))
         Thresholds_WiSe = unnormalize(X_cand, bounds_WiSe)
         ## Save the output
@@ -429,7 +480,7 @@ def run_one_replication(
         data_BO_WiSe = {"Thresholds": Thresholds_WiSe.numpy(),
                    "Obj": Obj_WiSe.numpy(),
                     "Obj_all":best_value_all.numpy()}
-        file_name = "2024_02_17_MORBO_corr_150m_tilts_RateandPc_iteration{}.mat".format(counter_WiSE)
+        file_name = "2024_02_22_MORBO_corr_50m_tilts_Rate_bias_iteration{}.mat".format(counter_WiSE)
         savemat(file_name, data_BO_WiSe)
 
         # Increment the counter
@@ -466,14 +517,14 @@ def run_one_replication(
 
 
 run_one_replication(
-        seed=1234567,
+        seed=1122,
         label="morbo",
-        max_evals=3000,
+        max_evals=2000,
         evalfn="WiSE",
         batch_size=1,
         dim=57,
         n_initial_points=5*57,
-        max_reference_point=[-5.0,0.0])
+        max_reference_point=[-5.0,-5.0])
 
 # d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
 #      "SINR_GUEs": 10 * np.log10(sinr_total_GUEs.numpy()),
