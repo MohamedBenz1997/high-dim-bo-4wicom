@@ -39,12 +39,12 @@ from tqdm import tqdm
 
 supported_labels = ["morbo"]
 
-BASE_SEED = 12346
+BASE_SEED = 1346
 def WiSe(x):
 
     dim = 57
-    lower_bound_WiSe = -15.0
-    upper_bound_WiSe = 20.0
+    lower_bound_WiSe = -25.0
+    upper_bound_WiSe = 25.0
     bounds_WiSe = torch.cat((torch.zeros(1, dim) + lower_bound_WiSe, torch.zeros(1, dim) + upper_bound_WiSe))
     new_x = unnormalize(x, bounds_WiSe)
     BS_tilt = tf.constant(new_x.numpy())
@@ -52,12 +52,12 @@ def WiSe(x):
 
     # #Specifiying tilts
     # BS_tilt = tf.expand_dims(tf.constant([[
-    #     -13.9327, - 13.2903, - 12.8647,   10.5337,    9.9584,   12.8540, - 13.7302, - 12.0697, - 12.2952, - 12.9120,
-    #     11.3224, - 13.4506,   12.7093, - 12.6343, - 12.1007, - 12.9844,   11.3501,   12.0331,   11.8313, - 12.1021,
-    #     - 13.6658,   10.4538,   13.8567, - 12.9336, - 13.0059, - 12.8360, - 12.8065, - 12.2845, - 13.9383, - 13.4531,
-    #     - 13.0222,   12.4988, - 14.2656,   12.3700, - 12.1800, - 13.2468, - 13.7995, - 13.0525, - 12.7080, - 12.7230,
-    #     - 12.7104, - 13.1767, - 11.7174, - 13.1188, - 12.4295, - 13.1245,   14.4940, - 13.1295, - 13.9200, - 12.7240,
-    #     - 13.2607, - 11.5826, - 12.8363,   13.1386, - 12.6877, - 13.2881, - 11.5168]]), axis=2)
+    #     -13.8137, - 11.7931, - 11.8693, 28.4037, 33.7573, - 11.3660, 27.1188, - 12.9570, - 11.9227, - 12.7056,
+    #     39.7116, - 10.3652, 19.5977, - 14.4678, - 11.1715, - 11.9129, 17.1804, 30.2612, 29.0168, - 10.4313,
+    #     29.6224, - 12.9595, - 12.6948, - 12.9950, 21.5117, - 11.7778, - 11.4830, - 13.5818, - 12.6055, 32.8525,
+    #     - 12.9300, 26.7119, - 11.6611, 33.7439, - 11.4657, - 14.2299, - 12.5002, 35.8209, - 14.1224, - 12.6076,
+    #     27.4939, - 9.7702, 24.1159, - 10.9561, - 11.0675, - 12.0542, - 12.8950, - 12.7781, - 12.4218, - 10.9001,
+    #     - 12.0256, - 9.6647, - 13.1336, 39.8641, - 11.8871, - 12.5598, - 11.1506]]), axis=2)
 
     BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
 
@@ -88,13 +88,12 @@ def WiSe(x):
 
     # BO objective
     # SINR_sumOftheLog_Obj, Rate_sumOftheLog_Obj, sinr_total_UAVs, sinr_total_GUEs = SINR.BO_Multi_Obj_Cooridor(sinr_TN_UAVs_Corridors, sinr_TN_GUEs, alpha=0.0)
-    # Rate_sumOftheLog_Obj_GUEs, Coverage_ratio, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN, D, D_2d, alpha=0.0)
-    Rate_sumOftheLog_Obj_UAVs, Coverage_ratio, _, _ = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN, D, D_2d, alpha=1.0)
-    Rate_sumOftheLog_Obj_GUEs, Coverage_ratio, _, _ = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN, D, D_2d, alpha=0.0)
+    # Rate_sumOftheLog_Obj_UAVs, Coverage_ratio, _, _ = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN, D, D_2d, alpha=1.0)
+    Rate_sumOftheLog_Obj_GUEs, UAVs_Coverage_ratio, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN, D, D_2d, alpha=0.0)
     Rate_obj_GUEs = Rate_sumOftheLog_Obj_GUEs[0].__float__()
-    Rate_obj_UAVs = Rate_sumOftheLog_Obj_UAVs[0].__float__()
-    Coverage_ratio = Coverage_ratio.__float__()
-    new_y = torch.tensor([[Rate_obj_GUEs,Rate_obj_UAVs]], dtype=torch.double)
+    # Rate_obj_UAVs = Rate_sumOftheLog_Obj_UAVs[0].__float__()
+    UAVs_Coverage_ratio = UAVs_Coverage_ratio.__float__()
+    new_y = torch.tensor([[UAVs_Coverage_ratio,Rate_obj_GUEs]], dtype=torch.double)
 
     KPI = new_y
     return KPI
@@ -245,46 +244,66 @@ def run_one_replication(
     # Create initial points
     n_points = min(n_initial_points, max_evals - trbo_state.n_evals)
     sobol = SobolEngine(dimension=dim, scramble=True, seed=seed)
-    # X_init = sobol.draw(n=n_points).to(dtype=dtype)
+    X_init = sobol.draw(n=n_points).to(dtype=dtype)
 
     ## Bias initialization of MORBO based on TuRBO best observed for \lambda=0.5, 0, and 1
     def bias_initialization(num_samples, feature_dim):
 
-        BS_tilt_tf_GUEs = tf.constant([[
+        BS_tilt_tf_Zero = tf.constant([[
             -14.2892, - 13.3303, - 13.8357,   10.7650,    7.9629,    8.9450, - 11.6216, - 13.5172, - 11.8110, - 11.6466,
             - 14.5059, - 13.6779, - 12.7726, - 13.8389, - 11.6859, - 12.6570, - 12.7154, - 14.1510,    7.0658, - 10.3518,
             - 9.3582, - 13.3084, - 12.9983, - 14.5288, - 14.4601, - 12.7762, - 12.9617, - 13.5321, - 13.6170, - 13.4990,
             - 13.3583, - 13.6499, - 13.0595, - 12.4591, - 12.2421, - 11.1918, - 12.3228, - 11.3664, - 13.9558, - 11.9876,
             - 12.4522, - 12.4918, - 11.3783, - 14.2981, - 12.8244, - 13.6442, - 14.6585, - 13.6940, - 13.0231, - 11.1856,
             - 12.9481, - 11.1927, - 13.4301, - 12.4440, - 12.4617,    7.1116, - 13.5773]])
-        BS_tilt_torch_GUEs = torch.tensor(BS_tilt_tf_GUEs.numpy(), dtype=torch.float64)
+        BS_tilt_torch_Zero = torch.tensor(BS_tilt_tf_Zero.numpy(), dtype=torch.float64)
 
-        BS_tilt_tf_UAVs = tf.constant([[
-            -13.4910, - 14.3924, - 13.4719, 9.6376, 11.7109, 11.6339, 11.4240, 13.8082, - 9.5150, - 14.3014,
-            13.0297, - 11.2548, 14.3674, 13.0484, - 10.5345, - 9.7556, 13.8271, 12.5596, - 9.2227, - 12.9586,
-            11.4705, 14.2217, 12.4362, - 10.1060, - 9.8232, - 13.0684, - 12.5620, - 12.2552, - 13.7850, 13.4906,
-            - 13.3329, - 11.3929, - 12.3790, 10.0597, 12.9263, - 10.4925, - 10.7433, - 11.1133, - 14.9433, 14.4689,
-            - 14.2804, - 10.3791, - 12.6751, - 9.2092, 14.5388, - 10.0850, 13.5035, - 12.6803, 11.0223, 14.9165,
-            - 12.6413, 12.9107, - 14.3168, 14.6330, 10.2188, 10.0585, 13.9559]])
-        BS_tilt_torch_UAVs = torch.tensor(BS_tilt_tf_UAVs.numpy(), dtype=torch.float64)
+        BS_tilt_tf_Point2 = tf.constant([[
+            -12.0260, - 11.5085, - 12.7766, - 13.0746, - 12.4723, - 13.1684, - 13.8454, - 11.6655, - 12.2450, - 14.4522,
+            - 13.1789, - 14.0807, - 13.5397, - 13.1480, - 12.7760, 23.6471, - 12.5327, 33.1522, - 12.1088, - 12.2209,
+            - 14.4600, 22.4779, - 12.8451, - 13.1575, - 14.1108, 25.3806, - 14.9111, - 14.6627, - 13.2382, - 13.7289,
+            - 13.2484, - 14.4992, - 12.7897, 31.1781, - 12.7562, 13.1258, - 14.9892, 33.4723, - 14.1247, - 12.8237,
+            - 13.6398, 17.6052, 17.7326, - 13.9574, - 13.9691, - 12.4148, - 13.1813, - 13.0617, - 14.0399, - 13.1162,
+            - 12.9902, 17.6224, - 12.3958, - 11.9649, - 13.0493, 22.7315, - 11.0403]])
+        BS_tilt_torch_Point2 = torch.tensor(BS_tilt_tf_Point2.numpy(), dtype=torch.float64)
 
-        BS_tilt_tf_both = tf.constant([[
-            -13.9327, - 13.2903, - 12.8647, 10.5337, 9.9584, 12.8540, - 13.7302, - 12.0697, - 12.2952, - 12.9120,
-            11.3224, - 13.4506, 12.7093, - 12.6343, - 12.1007, - 12.9844, 11.3501, 12.0331, 11.8313, - 12.1021,
-            - 13.6658, 10.4538, 13.8567, - 12.9336, - 13.0059, - 12.8360, - 12.8065, - 12.2845, - 13.9383, - 13.4531,
-            - 13.0222, 12.4988, - 14.2656, 12.3700, - 12.1800, - 13.2468, - 13.7995, - 13.0525, - 12.7080, - 12.7230,
-            - 12.7104, - 13.1767, - 11.7174, - 13.1188, - 12.4295, - 13.1245, 14.4940, - 13.1295, - 13.9200, - 12.7240,
-            - 13.2607, - 11.5826, - 12.8363, 13.1386, - 12.6877, - 13.2881, - 11.5168]])
+        BS_tilt_tf_Point5 = tf.constant([[
+            -13.8137, - 11.7931, - 11.8693, 28.4037, 33.7573, - 11.3660, 27.1188, - 12.9570, - 11.9227, - 12.7056,
+            39.7116, - 10.3652, 19.5977, - 14.4678, - 11.1715, - 11.9129, 17.1804, 30.2612, 29.0168, - 10.4313,
+            29.6224, - 12.9595, - 12.6948, - 12.9950, 21.5117, - 11.7778, - 11.4830, - 13.5818, - 12.6055, 32.8525,
+            - 12.9300, 26.7119, - 11.6611, 33.7439, - 11.4657, - 14.2299, - 12.5002, 35.8209, - 14.1224, - 12.6076,
+            27.4939, - 9.7702, 24.1159, - 10.9561, - 11.0675, - 12.0542, - 12.8950, - 12.7781, - 12.4218, - 10.9001,
+            - 12.0256, - 9.6647, - 13.1336, 39.8641, - 11.8871, - 12.5598, - 11.1506]])
+        BS_tilt_torch_Point5 = torch.tensor(BS_tilt_tf_Point5.numpy(), dtype=torch.float64)
 
-        BS_tilt_torch_both = torch.tensor(BS_tilt_tf_both.numpy(), dtype=torch.float64)
+        BS_tilt_tf_Point6 = tf.constant([[
+            -11.5395, - 12.8607, - 10.8685, 33.4698, 34.5847, 32.9097, - 11.2749, - 11.8031, - 9.5876,
+            - 10.6893, 23.8086, - 12.5987, 41.4470, 34.4545, - 10.2550, - 11.7659, 33.6878, - 11.2321,
+            28.3949, - 7.8793, 31.3095, 26.5038, - 11.8629, - 11.4746, - 12.2492, - 12.4322, - 11.7519,
+            - 9.9178, - 11.5090, 36.7895, - 11.3509, 34.8224, 28.2972, 32.2781, - 9.5022, - 11.8332,
+            - 13.1397, 32.9936, 34.9219, 38.2516, - 11.0911, - 11.6860, 24.3830, - 9.6113, - 10.1364,
+            - 12.2898, - 12.4645, 17.0272, - 11.6689, - 10.7625, - 12.8477, - 10.2673, - 11.7360, 41.0080,
+            - 12.2786, - 9.5722, - 12.2526]])
+        BS_tilt_torch_Point6 = torch.tensor(BS_tilt_tf_Point6.numpy(), dtype=torch.float64)
+
+        BS_tilt_tf_Point8 = tf.constant([[
+            -12.7479, - 12.1950, 40.7030, 35.3041, 34.9176, 30.4370, 26.9780, - 9.5958, 23.4183, 36.8702,
+            - 8.0839, 23.0541, 31.8710, 37.9133, - 9.2688, - 10.0122, 31.9294, 32.6061, 28.2703, 33.7399,
+            30.9552, - 7.7041, - 10.6577, - 10.8554, 37.1390, 23.8670, - 7.4052, - 12.1950, - 12.1019, 33.2482,
+            - 9.9215, 44.9863, 35.6639, 34.5195, - 7.9156, - 12.0275, - 11.7561, 35.5797, 35.4961, - 7.8521,
+            - 12.7777, 40.6756, 41.5747, - 9.1622, 41.4671, - 9.0788, 39.4770, - 8.3314, - 10.9107, - 10.1520,
+            - 8.9035, - 9.3284, - 9.9632, 43.0430, - 9.6113, - 11.0133, - 11.0595]])
+
+        BS_tilt_torch_Point8 = torch.tensor(BS_tilt_tf_Point8.numpy(), dtype=torch.float64)
 
         # Step 2: Generate X_init based on BS_tilt with random +/- 2 adjustments
         adjustments = (torch.rand((num_samples, feature_dim)) * 4) - 2  # Generate random values in [-2, 2]
-        adjustments2 = (torch.rand((num_samples+150, feature_dim)) * 4) - 2  # Generate random values in [-2, 2]
-        X_init_GUEs = BS_tilt_torch_GUEs + adjustments
-        X_init_UAVs = BS_tilt_torch_UAVs + adjustments
-        X_init_both = BS_tilt_torch_both + adjustments2
-        X_init = torch.cat((X_init_GUEs, X_init_UAVs, X_init_both), dim=0)
+        X_init_Zero = BS_tilt_torch_Zero + adjustments
+        X_init_Point2 = BS_tilt_torch_Point2 + adjustments
+        X_init_Point5 = BS_tilt_torch_Point5 + adjustments
+        X_init_Point6 = BS_tilt_torch_Point6 + adjustments
+        X_init_Point8 = BS_tilt_torch_Point8 + adjustments
+        X_init = torch.cat((X_init_Zero, X_init_Point2, X_init_Point5, X_init_Point6, X_init_Point8), dim=0)
 
         # Step 3: Normalize the values from [-15, 20] to [0, 1]
         old_min, old_max = -15, 20
@@ -293,7 +312,7 @@ def run_one_replication(
 
         return X_init
 
-    X_init = bias_initialization(num_samples=50, feature_dim=57)
+    # X_init = bias_initialization(num_samples=50, feature_dim=57)
 
     Y_init = torch.stack(
         [torch.tensor(WiSe(x), dtype=dtype) for x in X_init]
@@ -462,8 +481,8 @@ def run_one_replication(
             "tr_indices": all_tr_indices,
         }
         #Un-normalize the candidates
-        lower_bound_WiSe = -15.0
-        upper_bound_WiSe = 20.0
+        lower_bound_WiSe = -25.0
+        upper_bound_WiSe = 25.0
         bounds_WiSe = torch.cat((torch.zeros(1, dim) + lower_bound_WiSe, torch.zeros(1, dim) + upper_bound_WiSe))
         Thresholds_WiSe = unnormalize(X_cand, bounds_WiSe)
         ## Save the output
@@ -480,7 +499,7 @@ def run_one_replication(
         data_BO_WiSe = {"Thresholds": Thresholds_WiSe.numpy(),
                    "Obj": Obj_WiSe.numpy(),
                     "Obj_all":best_value_all.numpy()}
-        file_name = "2024_02_22_MORBO_corr_50m_tilts_Rate_bias_iteration{}.mat".format(counter_WiSE)
+        file_name = "2024_03_13_MORBO_corr_300m_tilts_PcUAVs_RateGUEs_TR10_min250_iteration{}.mat".format(counter_WiSE)
         savemat(file_name, data_BO_WiSe)
 
         # Increment the counter
@@ -517,14 +536,14 @@ def run_one_replication(
 
 
 run_one_replication(
-        seed=1122,
+        seed=112244,
         label="morbo",
         max_evals=2000,
         evalfn="WiSE",
         batch_size=1,
         dim=57,
-        n_initial_points=5*57,
-        max_reference_point=[-5.0,-5.0])
+        n_initial_points=5*57
+        max_reference_point=[0.0,-5.0])
 
 # d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
 #      "SINR_GUEs": 10 * np.log10(sinr_total_GUEs.numpy()),

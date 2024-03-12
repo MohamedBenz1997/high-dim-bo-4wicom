@@ -730,11 +730,16 @@ class SINR(Config):
         GUEs_Outage = tf.tile(tf.cast(sinr_TN_GUEs < 0.31622776, "float32"), [1, 57, 1])*indexing_GUEs
         UAVs_Outage = tf.tile(tf.cast(sinr_TN_UAVs < 0.31622776, "float32"), [1, 57, 1]) * indexing_UAVs
         Users_Outage_perBS = tf.reduce_sum(GUEs_Outage, axis=2)  + tf.reduce_sum(UAVs_Outage, axis=2)
-        Users_Outage = tf.reduce_sum(tf.reduce_mean(Users_Outage_perBS, axis=0),axis=0)
-        Outage_ratio = Users_Outage/855.0
-        Coverage_ratio = 1-Outage_ratio
+        Users_Outage = tf.reduce_sum(tf.reduce_mean(Users_Outage_perBS, axis=0), axis=0)
+        Outage_ratio = Users_Outage / 855.0
+        Coverage_ratio = 1 - Outage_ratio
+
+        UAVs_Outage_perBS = tf.reduce_sum(UAVs_Outage, axis=2)
+        UAVs_Outage = tf.reduce_sum(tf.reduce_mean(UAVs_Outage_perBS, axis=0),axis=0)
+        UAVs_Outage_ratio = UAVs_Outage/(0.3333*855.0)
+        UAVs_Coverage_ratio = 1-UAVs_Outage_ratio
 
         #Final Obj of sum log rates
         Rate_sumOftheLog_Obj = Rate_sumOftheLog_Obj1/100.0
         
-        return Rate_sumOftheLog_Obj, Coverage_ratio, Rate_GUEs, Rate_UAVs
+        return Rate_sumOftheLog_Obj, UAVs_Coverage_ratio, Rate_GUEs, Rate_UAVs
