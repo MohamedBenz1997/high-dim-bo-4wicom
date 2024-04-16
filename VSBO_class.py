@@ -83,6 +83,11 @@ class BOtorch(object):
             data.BS_tilt = BS_tilt
             data.BS_HPBW_v = BS_HPBW_v
             data.call()
+
+            # Import distances
+            D = data.D
+            D_2d = data.D_2d
+
             # Import of the UAVs and GUEs LSG and SINR data
             Xuser_GUEs = data.Xuser_GUEs
             Xuser_UAVs = data.Xuser_UAVs
@@ -94,9 +99,11 @@ class BOtorch(object):
             # BO objective: Sum of log of the RSS
             SINR_sumOftheLog_Obj, Rate_sumOftheLog_Obj, sinr_total_UAVs, sinr_total_GUEs = SINR.BO_Multi_Obj_Cooridor(
                 sinr_TN_UAVs_Corridors, sinr_TN_GUEs, alpha=0.5)
-            Rate_sumOftheLog_Obj, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors,
-                                                                                      P_Tx_TN,
-                                                                                      alpha=0.5)
+            Rate_sumOftheLog_Obj, UAVs_Coverage_ratio, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs,
+                                                                                                           LSG_UAVs_Corridors,
+                                                                                                           P_Tx_TN, D,
+                                                                                                           D_2d,
+                                                                                                           alpha=0.5)
             Rate_obj = Rate_sumOftheLog_Obj[0].__float__()
             new_obj = torch.tensor([[Rate_obj]], dtype=torch.double)
 
@@ -105,6 +112,78 @@ class BOtorch(object):
             # BSs_id_GUEs, Xuser_GUEs_x, Xuser_GUEs_y = SINR.Cell_id(LSG_GUEs, Xuser_GUEs)
 
             # Append the thresholds and objectives
+            train_x = torch.cat((train_x, new_train_x), dim=0)
+            train_obj = torch.cat((train_obj, new_obj), dim=0)
+
+        # Save the torch tensors to a file with .pt extension to be loaded using python later
+        # file_name = "2023_09_25_Corr_SAforSB_SAonly_Down.pt"
+        # torch.save({"train_x": train_x, "train_obj": train_obj}, file_name)
+
+        self.X = train_x
+        self.Y = train_obj
+
+    def data_initialize_tilt_vHPBW(self,):
+
+        train_x_tilts = self.tilts_vector[:, :, 0]
+        train_x_tilts = torch.from_numpy(train_x_tilts.numpy()).double()
+        train_x_vHPBW = self.HPBW_v_vector[:, :, 0]
+        train_x_vHPBW = torch.from_numpy(train_x_vHPBW.numpy()).double()
+        train_x = torch.cat((train_x_tilts, train_x_vHPBW), dim=1)
+        train_obj = self.obj_vector
+
+        for j in range(self.data_size):
+            ##Setting Random tilts for all BSs creating a data set
+            BS_tilt = tf.random.uniform(self.tilts_vector.shape, -15, 45)
+            new_train_x_tilts = torch.from_numpy(BS_tilt[:, :, 0].numpy()).double()
+
+            # BS_tilt = self.tilts_vector  # This is for getting the SINR for the opt thresholds after finishing
+            BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
+
+            ##Setting Random vHPBW for all BSs creating a data set
+            BS_HPBW_v = tf.random.uniform(self.tilts_vector.shape, 5, 30)
+
+            new_train_x_vHPBW = torch.from_numpy(BS_HPBW_v[:, :, 0].numpy()).double()
+
+            #BS_HPBW_v = self.HPBW_v_vector  # This is for getting the SINR for the opt thresholds after finishing
+            BS_HPBW_v = tf.tile(BS_HPBW_v, [2 * config.batch_num, 1, config.Nuser_drop])
+
+            P_Tx_TN = self.Ptx_thresholds_vector  # This is for getting the SINR for the opt thresholds after finishing
+            P_Tx_TN = tf.tile(P_Tx_TN, [2 * config.batch_num, 1, config.Nuser_drop])
+
+            # Run the simulator
+            data = Terrestrial()
+            data.alpha_factor = 0.0  # LEO at 90deg
+            data.BS_tilt = BS_tilt
+            data.BS_HPBW_v = BS_HPBW_v
+            data.call()
+
+            # Import distances
+            D = data.D
+            D_2d = data.D_2d
+
+            # Import of the UAVs and GUEs LSG and SINR data
+            Xuser_GUEs = data.Xuser_GUEs
+            Xuser_UAVs = data.Xuser_UAVs
+            LSG_UAVs_Corridors = data.LSG_UAVs_Corridors
+            LSG_GUEs = data.LSG_GUEs
+            sinr_TN_UAVs_Corridors = SINR.sinr_TN(LSG_UAVs_Corridors, P_Tx_TN)
+            sinr_TN_GUEs = SINR.sinr_TN(LSG_GUEs, P_Tx_TN)
+
+            # BO objective: Sum of log of the RSS
+            Rate_sumOftheLog_Obj, UAVs_Coverage_ratio, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs,
+                                                                                                           LSG_UAVs_Corridors,
+                                                                                                           P_Tx_TN, D,
+                                                                                                           D_2d,
+                                                                                                           alpha=0.5)
+            Rate_obj = Rate_sumOftheLog_Obj[0].__float__()
+            new_obj = torch.tensor([[Rate_obj]], dtype=torch.double)
+
+            ## Serving BSs indexes and UAVs locations
+            # BSs_id_UAVs, Xuser_UAVs_x, Xuser_UAVs_y = SINR.Cell_id(LSG_UAVs_Corridors, Xuser_UAVs)
+            # BSs_id_GUEs, Xuser_GUEs_x, Xuser_GUEs_y = SINR.Cell_id(LSG_GUEs, Xuser_GUEs)
+
+            # Append the thresholds and objectives
+            new_train_x = torch.cat((new_train_x_tilts, new_train_x_vHPBW), dim=1)
             train_x = torch.cat((train_x, new_train_x), dim=0)
             train_obj = torch.cat((train_obj, new_obj), dim=0)
 
@@ -225,6 +304,48 @@ class BOtorch(object):
         new_y = torch.tensor([[Rate_obj]], dtype=torch.double)
 
         self.X, self.Y = torch.cat((self.X, new_x)), torch.cat((self.Y, new_y))
+
+    # def data_update_tilt_vHPBW(self):
+        # new_x = unnormalize(self.new_x_normalize, bounds=self.bound)
+        #
+        # BS_tilt = tf.constant(new_x.numpy())
+        # BS_tilt = tf.expand_dims(BS_tilt, axis=2)
+        # BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
+        #
+        # # Run simulator based on new candidates
+        # ########################################################
+        #
+        # # If power and tilts are not being optimized
+        # P_Tx_TN = tf.tile(Ptx_thresholds_vector, [2 * config.batch_num, 1, config.Nuser_drop])
+        # BS_HPBW_v = tf.tile(HPBW_v_vector, [2 * config.batch_num, 1, config.Nuser_drop])
+        #
+        # data = Terrestrial()
+        # data.alpha_factor = 0.0  # LEO at 90deg
+        # data.BS_tilt = BS_tilt
+        # data.BS_HPBW_v = BS_HPBW_v
+        # data.call()
+        #
+        # # Import distances
+        # D = data.D
+        # D_2d = data.D_2d
+        #
+        # # Import of the UAVs and GUEs LSG and SINR data
+        # LSG_UAVs_Corridors = data.LSG_UAVs_Corridors
+        # LSG_GUEs = data.LSG_GUEs
+        # sinr_TN_UAVs_Corridors = SINR.sinr_TN(LSG_UAVs_Corridors, P_Tx_TN)
+        # sinr_TN_GUEs = SINR.sinr_TN(LSG_GUEs, P_Tx_TN)
+        #
+        # # BO objective
+        # Rate_sumOftheLog_Obj, UAVs_Coverage_ratio, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs,
+        #                                                                                                LSG_UAVs_Corridors,
+        #                                                                                                P_Tx_TN, D,
+        #                                                                                                D_2d,
+        #                                                                                                alpha=0.5)
+        #
+        # Rate_obj = Rate_sumOftheLog_Obj[0].__float__()
+        # new_y = torch.tensor([[Rate_obj]], dtype=torch.double)
+        #
+        # self.X, self.Y = torch.cat((self.X, new_x)), torch.cat((self.Y, new_y))
 
     def erase_last_instance(self):
         self.X = self.X[:-1]
@@ -535,4 +656,117 @@ class VSBO(BOtorch):
                    "best_rate_so_far": self.best_rate_so_far.numpy(),
                    "Full_tilts": Full_tilts.numpy()}
         file_name = "2024_01_05_VSBO_Corr_150m_iteration{}.mat".format(iter_num)
+        savemat(file_name, data_BO)
+
+    def data_update_tilt_vHPBW(self, iter_num, method='CMAES_posterior', n_sampling=1):
+        # self.lessiv_n_sampling = n_sampling
+        # pdb.set_trace()
+        new_x = torch.tensor([0 for i in range(self.X_dim)], dtype=dtype, device=device).reshape((1, self.X_dim))
+        new_x[:, self.active_f_list] = self.new_x_normalize_active
+        if (self.X_dim > self.active_f_dims):
+            # pdb.set_trace()
+            if (method == 'rand'):
+                new_x[:, ~self.active_f_list] = torch.rand(1, self.X_dim - self.active_f_dims, device=device,
+                                                           dtype=dtype)
+            if (method == 'mix'):
+                # pdb.set_trace()
+                rand_s = np.random.uniform(0, 1)
+                if (rand_s <= 0.5):
+                    new_x[:, ~self.active_f_list] = torch.rand(1, self.X_dim - self.active_f_dims, device=device,
+                                                               dtype=dtype)
+                else:
+                    new_x[:, ~self.active_f_list] = normalize(self.X, bounds=self.bound)[
+                        self.Y.argmax(), ~self.active_f_list].reshape((1, self.X_dim - self.active_f_dims))
+            elif (method == 'CMAES_posterior'):
+                CMA_cond_mean = self.conditiona_normal_list[0] + np.dot(
+                    np.dot(self.conditiona_normal_list[3], self.conditiona_normal_list[6]), (
+                                self.new_x_normalize_active.numpy().reshape((self.active_f_dims,)) -
+                                self.conditiona_normal_list[1]))
+                CMA_cond_cov = self.conditiona_normal_list[-1]
+                self.new_x_normalize_inactive = self.truncated_multivariate_normal_sampling(CMA_cond_mean, CMA_cond_cov,
+                                                                                            n_sampling)
+                # self.new_x_normalize_inactive = np.random.multivariate_normal(CMA_cond_mean,CMA_cond_cov,n_sampling)
+                # x_arr,y_arr = np.where(self.new_x_normalize_inactive>1)
+                # self.new_x_normalize_inactive[x_arr,y_arr] = 1
+                # x_arr,y_arr = np.where(self.new_x_normalize_inactive<0)
+                # self.new_x_normalize_inactive[x_arr,y_arr] = 0
+                new_x_multi = new_x.repeat(n_sampling, 1)
+                new_x_multi[:, ~self.active_f_list] = torch.tensor(self.new_x_normalize_inactive, device=device,
+                                                                   dtype=dtype).reshape(
+                    (n_sampling, self.X_dim - self.active_f_dims))
+                if (n_sampling > 1):
+                    post = self.model.posterior(new_x_multi)
+                    new_x = new_x_multi[post.mean.argmax()].reshape((1, self.X_dim))
+                else:
+                    new_x = new_x_multi
+            else:
+                print("The method to get the value of less important variables has not been implemented!")
+        new_x = unnormalize(new_x, bounds=self.bound)
+
+        BS_tilt = tf.constant(new_x[:,0:57].numpy())
+        BS_tilt = tf.expand_dims(BS_tilt, axis=2)
+        BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
+
+        BS_HPBW_v = tf.constant(new_x[:,57:].numpy())
+        BS_HPBW_v = tf.expand_dims(BS_HPBW_v, axis=2)
+        BS_HPBW_v = tf.tile(BS_HPBW_v, [2 * config.batch_num, 1, config.Nuser_drop])
+
+        # Run simulator based on new candidates
+        ########################################################
+
+        # If power and tilts are not being optimized
+        P_Tx_TN = tf.tile(self.Ptx_thresholds_vector, [2 * config.batch_num, 1, config.Nuser_drop])
+
+        data = Terrestrial()
+        data.alpha_factor = 0.0  # LEO at 90deg
+        data.BS_tilt = tf.constant(BS_tilt.numpy(), dtype=tf.float32)
+        data.BS_HPBW_v = tf.constant(BS_HPBW_v.numpy(), dtype=tf.float32)
+        data.call()
+
+        # Import distances
+        D = data.D
+        D_2d = data.D_2d
+
+        # Import of the UAVs and GUEs LSG and SINR data
+        LSG_UAVs_Corridors = data.LSG_UAVs_Corridors
+        LSG_GUEs = data.LSG_GUEs
+        sinr_TN_UAVs_Corridors = SINR.sinr_TN(LSG_UAVs_Corridors, P_Tx_TN)
+        sinr_TN_GUEs = SINR.sinr_TN(LSG_GUEs, P_Tx_TN)
+
+        # BO objective
+        Rate_sumOftheLog_Obj, UAVs_Coverage_ratio, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs,
+                                                                                                       LSG_UAVs_Corridors,
+                                                                                                       P_Tx_TN, D,
+                                                                                                       D_2d,
+                                                                                                       alpha=0.5)
+        Rate_obj = Rate_sumOftheLog_Obj[0].__float__()
+        new_y = torch.tensor([[Rate_obj]], dtype=torch.double)
+        self.X, self.Y = torch.cat((self.X, new_x)), torch.cat((self.Y, new_y))
+
+        # Monitoring the progress of best observed value so far
+        best_value = tf.expand_dims(tf.reduce_max(self.Y[self.data_size:, :], axis=0), axis=0)
+        if iter_num == 1:
+            self.best_rate_so_far = tf.zeros(best_value.shape, dtype='float64')
+        self.best_rate_so_far = tf.concat([self.best_rate_so_far, best_value], axis=0)
+
+        # BO Outputs
+        Thresholds = self.X[self.data_size:, :]
+        Obj = self.Y[self.data_size:, :]
+        Thresholds = Thresholds.numpy()
+        Thresholds = tf.convert_to_tensor(Thresholds)
+        Obj = Obj.numpy()
+        Obj = tf.convert_to_tensor(Obj)
+        best_observed_objective_value = tf.reduce_max(Obj, axis=0)
+        optimum_thresholds = tf.tile(tf.cast(Obj == best_observed_objective_value, "float64"), [1, 1]) * Thresholds
+        optimum_thresholds = tf.reduce_sum(optimum_thresholds, axis=0)
+        Full_tilts = optimum_thresholds
+
+        # Saving BO data for matlab
+        data_BO = {"Thresholds": Thresholds.numpy(),
+                   "Obj": Obj.numpy(),
+                   "best_observed_objective_value": best_observed_objective_value.numpy(),
+                   "optimum_thresholds": optimum_thresholds.numpy(),
+                   "best_rate_so_far": self.best_rate_so_far.numpy(),
+                   "Full_tilts": Full_tilts.numpy()}
+        file_name = "2024_04_16_VSBO_Corr_150m_tilts_vHPBW_iteration{}.mat".format(iter_num)
         savemat(file_name, data_BO)
