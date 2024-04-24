@@ -59,13 +59,13 @@ def generate_initial_data(tilts_vector, HPBW_v_vector, Ptx_thresholds_vector, ob
             ##Different sets of samples in the initial data-set
             ########################################################
             if j>=0 and j<=24:
-                BS_tilt = tf.random.uniform(tilts_vector.shape, -10.0, -5.0)
+                BS_tilt = tf.random.uniform(tilts_vector.shape, -15.0, -5.0)
             elif j>=25 and j<=49:
-                BS_tilt = tf.random.uniform(tilts_vector.shape, 10.0, 30.0)
+                BS_tilt = tf.random.uniform(tilts_vector.shape, 10.0, 45.0)
             elif j >= 50 and j <= 74:
-                BS_tilt = tf.random.uniform(tilts_vector.shape, -10.0, 30.0)
+                BS_tilt = tf.random.uniform(tilts_vector.shape, -15.0, 45.0)
             elif j >= 75 and j <= 100:
-                BS_tilt = tf.random.uniform(tilts_vector.shape, -10.0, 30.0)
+                BS_tilt = tf.random.uniform(tilts_vector.shape, -15.0, 45.0)
                 # Define the excluded range
                 excluded_range = tf.constant([-5.0, 10.0]) #-10,10
                 # Mask out values within the excluded range
@@ -97,7 +97,7 @@ def generate_initial_data(tilts_vector, HPBW_v_vector, Ptx_thresholds_vector, ob
         BS_tilt = tf.tile(BS_tilt, [2 * config.batch_num, 1, config.Nuser_drop])
 
         #Setting Random powers for creating a data set
-        BS_HPBW_v = tf.random.uniform(HPBW_v_vector.shape, 38, 46)
+        BS_HPBW_v = tf.random.uniform(HPBW_v_vector.shape, 5, 30)
         new_train_x2 = torch.from_numpy(BS_HPBW_v[:,:,0].numpy()).double()
         # BS_HPBW_v = HPBW_v_vector  # This is for getting the SINR for the opt thresholds after finishing
         BS_HPBW_v = tf.tile(BS_HPBW_v, [2 * config.batch_num, 1, config.Nuser_drop])
@@ -112,6 +112,11 @@ def generate_initial_data(tilts_vector, HPBW_v_vector, Ptx_thresholds_vector, ob
         data.BS_tilt = BS_tilt
         data.BS_HPBW_v = BS_HPBW_v
         data.call()
+
+        # Import distances
+        D = data.D
+        D_2d = data.D_2d
+
         #Import of the UAVs and GUEs LSG and SINR data
         Xuser_GUEs = data.Xuser_GUEs
         Xuser_UAVs = data.Xuser_UAVs
@@ -121,8 +126,10 @@ def generate_initial_data(tilts_vector, HPBW_v_vector, Ptx_thresholds_vector, ob
         sinr_TN_GUEs = SINR.sinr_TN(LSG_GUEs, P_Tx_TN)
 
         # BO objective: Sum of log of the RSS
-        SINR_sumOftheLog_Obj, Rate_sumOftheLog_Obj, sinr_total_UAVs, sinr_total_GUEs = SINR.BO_Multi_Obj_Cooridor(sinr_TN_UAVs_Corridors, sinr_TN_GUEs, alpha=0.5)
-        Rate_sumOftheLog_Obj, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN,alpha=0.5)
+        Rate_sumOftheLog_Obj, UAVs_Coverage_ratio, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs,
+                                                                                                       LSG_UAVs_Corridors,
+                                                                                                       P_Tx_TN, D, D_2d,
+                                                                                                       alpha=0.5)
         Rate_obj = Rate_sumOftheLog_Obj[0].__float__()
         new_obj = torch.tensor([[Rate_obj]], dtype=torch.double)
 
@@ -144,8 +151,8 @@ def generate_initial_data(tilts_vector, HPBW_v_vector, Ptx_thresholds_vector, ob
 
 # Run BO loop
 ########################################################
-BO_itertions = 100
-data_size = 100
+BO_itertions = 4
+data_size = 2
 
 #Initial tilts and powers and obj value
 tilts_vector = tf.expand_dims(tf.expand_dims(tf.random.uniform((57,), 0.0, 0.0, tf.float32), axis=0),axis=2)
@@ -189,13 +196,13 @@ for i in tqdm(range(BO_itertions)):
     ########################################################
     # Setting tilts bounds
     DIM = 57
-    lower_bound = -20.0
-    upper_bound = 20.0
+    lower_bound = -15.0
+    upper_bound = 45.0
     bounds1 = torch.cat((torch.zeros(1, DIM)+lower_bound, torch.zeros(1, DIM)+upper_bound))
     # Setting vHPBW bounds
     DIM = 57
-    lower_bound = 10.0
-    upper_bound = 40.0
+    lower_bound = 5.0
+    upper_bound = 30.0
     bounds2 = torch.cat((torch.zeros(1, DIM)+lower_bound, torch.zeros(1, DIM)+upper_bound))
     # Combine both bounds
     bounds = torch.cat((bounds1, bounds2), dim=1)
@@ -226,6 +233,10 @@ for i in tqdm(range(BO_itertions)):
     data.BS_HPBW_v = BS_HPBW_v
     data.call()
 
+    # Import distances
+    D = data.D
+    D_2d = data.D_2d
+
     #Import of the UAVs and GUEs LSG and SINR data
     LSG_UAVs_Corridors = data.LSG_UAVs_Corridors
     LSG_GUEs = data.LSG_GUEs
@@ -233,7 +244,7 @@ for i in tqdm(range(BO_itertions)):
     sinr_TN_GUEs = SINR.sinr_TN(LSG_GUEs, P_Tx_TN)
 
     # BO objective
-    Rate_sumOftheLog_Obj, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN,alpha=0.5)
+    Rate_sumOftheLog_Obj, UAVs_Coverage_ratio, Rate_GUEs, Rate_UAVs = SINR.BO_Obj_Rates_and_Outage(LSG_GUEs, LSG_UAVs_Corridors, P_Tx_TN, D, D_2d, alpha=0.5)
     Rate_obj = Rate_sumOftheLog_Obj[0].__float__()
     new_obj = torch.tensor([[Rate_obj]], dtype=torch.double)
 
@@ -268,7 +279,7 @@ for i in tqdm(range(BO_itertions)):
                "best_rate_so_far": best_rate_so_far.numpy(),
                "Full_tilts": Full_tilts.numpy(),
                "Full_HPBW_h": Full_HPBW_h.numpy()}
-    file_name = "2023_11_02_HDBOEK_Tilt_vHPBW_Corr_iteration{}_set.mat".format(i)
+    file_name = "2024_04_16_SAASBO_Corr_tilts_vHPBW_iteration{}.mat".format(i)
     savemat(file_name, data_BO)
 
     # d = {"SINR_UAVs": 10 * np.log10(sinr_total_UAVs.numpy()),
