@@ -13,7 +13,7 @@ class Config():
     def __init__(self):
 
         # ------------ Define the general paramters that will be used in the upcoming functions.
-        self.batch_num = 200   #Number of iterations to run
+        self.batch_num = 2   #Number of iterations to run
         self.beta_open_loop = 1
         self.Zuser = 1.5            #Hight of user in m
         self.Zap = 25.0             #Hight of BSs in m
@@ -129,10 +129,10 @@ class Config():
         self.UAVs_highway = True
 
         # --------- Corridor hights
-        self.h_corr1 = 300.0
-        self.h_corr2 = 300.0
-        self.h_corr3 = 300.0
-        self.h_corr4 = 300.0
+        self.h_corr1 = 150.0
+        self.h_corr2 = 150.0
+        self.h_corr3 = 150.0
+        self.h_corr4 = 150.0
 
         # --------- Assigment based on RSS+toe (where toe is going to be optimized by BO for load balancing)
         self.RSS_offloading = False
@@ -141,7 +141,7 @@ class Config():
         # self.BS_tilt=-40.0 #minus sign refer to being down-tilted
 
         # --------- Specialized BO
-        self.Specialized_BO = False
+        self.Specialized_BO = True
         self.IterativeBO_1Threshold = False
 
         # --------- UEs debugging
